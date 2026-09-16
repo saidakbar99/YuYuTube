@@ -1,0 +1,54 @@
+# YuYuTube
+
+A private, static, kid-safe video player. YouTube embeds only, no YouTube UI.
+
+## Adding a video
+
+One line in `src/data/videos.ts`, then push:
+
+```ts
+{ id: "XqZsoesa55w", title: "Baby Shark Dance" },
+```
+
+Check the whole library is still playable and embeddable:
+
+```
+npm run check-videos
+```
+
+Exits non-zero and names the offending IDs if any are removed, private, or embedding-disabled.
+
+## Config
+
+`src/config.ts`:
+
+| key | default | meaning |
+| --- | --- | --- |
+| `autoplayNext` | `true` | roll straight into the next video, else show a "watch again / pick another" card |
+| `recentWindow` | `5` | how many recently-watched IDs get pushed to the end of the feed |
+| `screenTimeLimitMinutes` | `null` | `null` is off. When set, playback time accumulates per day and locks to a "time to rest" screen; unlock by pressing and holding the bottom-right corner button for 3s |
+
+## Commands
+
+```
+npm run dev
+npm run build          # static export to out/
+npm run lint
+npm run typecheck
+npm run check-videos
+npm run generate-icons # regenerate the placeholder PWA icons
+```
+
+## Deploy
+
+Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env vars.
+
+## Notes
+
+- Player host is `youtube-nocookie.com`, controls off, and a transparent overlay covers the iframe at all times so no tap reaches YouTube's UI.
+- Pause and the last ~0.5s of playback are covered by an opaque layer, so suggestions and the end screen are never on screen.
+- `rel: 0` no longer removes related videos (YouTube changed this in 2018) — the overlay and the pause/end covers are what actually keep them out of reach.
+- Thumbnails use `maxresdefault.jpg` (1280x720, true 16:9) and fall back to `hqdefault.jpg` on error. `check-videos` reports which videos lack a maxres still — cosmetic only, it never fails the build.
+- Backgrounding the app pauses playback and re-reads the player's own state on return, so the overlay can't drift out of sync with what is actually playing.
+- If playback silently stalls (clock stops advancing for 10s while the player still claims to be playing) the app shows its own retry screen. It also recovers on its own if the stream resumes.
+- Icons in `public/icons/` are generated placeholders; replace them with real art whenever.

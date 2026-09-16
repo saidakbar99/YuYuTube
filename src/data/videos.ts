@@ -1,0 +1,28 @@
+export type Video = { id: string; title: string };
+
+export const videos: Video[] = [
+  { id: "BNTn55I68jU", title: "Bu nima? Iya iya yo" },
+  { id: "0vYvII4lmDg", title: "Arab raqamlari" },
+  { id: "WGcjkD93-Dc", title: "Arab harflari" },
+  { id: "rXqcXhbAemU", title: "Plane to Madinah" },
+  { id: "pgtCJr5zf_E", title: "Wheels on the bus" },
+  { id: "-36bn1lOHpA", title: "Muslim boy" },
+  { id: "ijQSX2bWSE8", title: "Hamza hamza" },
+  { id: "vOPzRIylk9A", title: "Muslim shark" },
+  { id: "mwHhEo25jlo", title: "Kasblar arabchada" },
+  { id: "2w01DQwH2oU", title: "Taq taq taq" },
+  { id: "jH83RUB4x8g", title: "Hayvonlar ovozlari" },
+  { id: "AdQCja4MBcY", title: "Arabcha ranglar" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+  // { id: "", title: "" },
+];

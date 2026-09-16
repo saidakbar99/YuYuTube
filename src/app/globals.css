@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-yt-bg: #0f0f0f;
+  --color-yt-surface: #212121;
+  --color-yt-elevated: #272727;
+  --color-yt-text: #f1f1f1;
+  --color-yt-muted: #aaaaaa;
+  --color-yt-red: #ff0000;
+
+  --font-sans: Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background-color: var(--color-yt-bg);
+    color: var(--color-yt-text);
+  }
+
+  body {
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img {
+    -webkit-user-drag: none;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+}
+
+/* The YouTube API swaps its target node for an iframe, so style it from the host. */
+.player-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+
+.player-stage:fullscreen,
+.player-stage.is-pseudo-fullscreen {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.player-stage.is-pseudo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
