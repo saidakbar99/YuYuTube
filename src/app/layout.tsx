@@ -9,13 +9,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "YuYuTube", statusBarStyle: "black-translucent" },
   // Next emits the modern `mobile-web-app-capable`; older iPadOS still wants this one.
   other: { "apple-mobile-web-app-capable": "yes" },
-  icons: {
-    icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-  },
+  // Favicons and the iOS home-screen icon come from src/app/{favicon.ico,icon.svg,apple-icon.png}.
 };
 
 export const viewport: Viewport = {

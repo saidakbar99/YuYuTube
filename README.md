@@ -36,7 +36,7 @@ npm run build          # static export to out/
 npm run lint
 npm run typecheck
 npm run check-videos
-npm run generate-icons # regenerate the placeholder PWA icons
+npm run generate-icons # regenerate favicon, iOS and Android icons
 ```
 
 ## Deploy
@@ -51,4 +51,8 @@ Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env
 - Thumbnails use `maxresdefault.jpg` (1280x720, true 16:9) and fall back to `hqdefault.jpg` on error. `check-videos` reports which videos lack a maxres still — cosmetic only, it never fails the build.
 - Backgrounding the app pauses playback and re-reads the player's own state on return, so the overlay can't drift out of sync with what is actually playing.
 - If playback silently stalls (clock stops advancing for 10s while the player still claims to be playing) the app shows its own retry screen. It also recovers on its own if the stream resumes.
-- Icons in `public/icons/` are generated placeholders; replace them with real art whenever.
+- All icons are drawn by `scripts/generate-icons.mjs` from one set of design constants (colours and proportions at the top of the file), so tweak those and rerun rather than editing the images:
+  - `src/app/favicon.ico` (16/32/48) and `src/app/icon.svg` — browser tab, transparent background
+  - `src/app/apple-icon.png` (180) — iOS/iPadOS home screen, opaque because iOS fills transparency with black
+  - `public/icons/icon-{192,512}.png` — installed-app icon and Android splash, transparent
+  - `public/icons/icon-maskable-{192,512}.png` — Android launcher, full bleed with the badge inside the safe zone

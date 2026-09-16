@@ -71,7 +71,8 @@ export function WatchScreen({
     <div className="flex min-h-dvh flex-col bg-yt-bg md:landscape:h-dvh md:landscape:flex-row md:landscape:overflow-hidden">
       {/* No transform here: it would become the containing block for the
           pseudo-fullscreen stage's position:fixed and break iOS fullscreen. */}
-      <div className="sticky top-0 z-30 bg-black md:landscape:static md:landscape:flex md:landscape:w-[65%] md:landscape:items-center">
+      {/* Top padding keeps the video out from under the iPhone status bar in the saved app. */}
+      <div className="sticky top-0 z-30 bg-black pt-[env(safe-area-inset-top)] md:landscape:static md:landscape:flex md:landscape:w-[65%] md:landscape:items-center">
         <Player
           video={video}
           status={status}

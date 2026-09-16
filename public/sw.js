@@ -1,4 +1,4 @@
-const VERSION = "yuyutube-v2";
+const VERSION = "yuyutube-v3";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
 

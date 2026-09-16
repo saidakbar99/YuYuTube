@@ -13,10 +13,11 @@ type GestureHandlers = {
   onSwipeLeft: () => void;
 };
 
-export function useGestures(handlers: GestureHandlers) {
-  const latest = useRef(handlers);
+/** `rotated`: the surface is turned 90° clockwise, so swipes are read in the video's frame, not the screen's. */
+export function useGestures(handlers: GestureHandlers, rotated = false) {
+  const latest = useRef({ ...handlers, rotated });
   useEffect(() => {
-    latest.current = handlers;
+    latest.current = { ...handlers, rotated };
   });
   const origin = useRef<{ x: number; y: number; t: number } | null>(null);
 
@@ -39,8 +40,10 @@ export function useGestures(handlers: GestureHandlers) {
         origin.current = null;
         if (!start) return;
 
-        const dx = event.clientX - start.x;
-        const dy = event.clientY - start.y;
+        const screenX = event.clientX - start.x;
+        const screenY = event.clientY - start.y;
+        // Undo the clockwise quarter turn: the video's "down" is the screen's left.
+        const [dx, dy] = latest.current.rotated ? [screenY, -screenX] : [screenX, screenY];
         const absX = Math.abs(dx);
         const absY = Math.abs(dy);
 

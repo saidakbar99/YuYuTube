@@ -85,7 +85,7 @@ export function Player({
       wake();
       onNext();
     },
-  });
+  }, fullscreen.rotated);
 
   useEffect(() => {
     if (status !== "playing" || !controlsShown) return;
@@ -101,9 +101,14 @@ export function Player({
   return (
     <div
       ref={stageRef}
-      className={`player-stage relative aspect-video w-full overflow-hidden bg-black ${
-        fullscreen.pseudo ? "is-pseudo-fullscreen" : ""
-      }`}
+      className={[
+        "player-stage relative aspect-video w-full overflow-hidden bg-black",
+        fullscreen.active && "is-fullscreen",
+        fullscreen.pseudo && "is-pseudo-fullscreen",
+        fullscreen.rotated && "is-rotated",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div ref={frameRef} className="player-frame absolute inset-0" />
 
@@ -121,11 +126,11 @@ export function Player({
 
       {!showEndCard && !showStallCard && (
         <div
-          className={`pointer-events-none absolute inset-0 z-30 transition-opacity duration-200 ${
+          className={`player-controls pointer-events-none absolute inset-0 z-30 transition-opacity duration-200 ${
             controlsShown ? "opacity-100" : "opacity-0"
           }`}
         >
-          <div className="absolute inset-x-0 top-0 bg-linear-to-b from-black/60 to-transparent p-1 pt-[max(0.25rem,env(safe-area-inset-top))]">
+          <div className="absolute inset-x-0 top-0 bg-linear-to-b from-black/60 to-transparent p-1">
             <button
               type="button"
               onClick={onHome}
@@ -160,7 +165,7 @@ export function Player({
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-10">
+          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent px-3 pb-1 pt-10">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium tabular-nums text-white">
                 {clock(progress.current)} / {clock(progress.duration)}
