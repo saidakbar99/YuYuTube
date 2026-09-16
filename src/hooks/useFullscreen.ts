@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
+import { animateStage, capturePose, type Pose } from "@/lib/stageMotion";
 
 type WebkitElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
 type WebkitDocument = Document & {
@@ -38,6 +47,8 @@ function subscribePortrait(onChange: () => void) {
 export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
   const [native, setNative] = useState(false);
   const [pseudo, setPseudo] = useState(false);
+  // Where the stage was on screen just before the CSS fullscreen layer was toggled.
+  const departureRef = useRef<Pose | null>(null);
   const portrait = useSyncExternalStore(
     subscribePortrait,
     () => window.matchMedia("(orientation: portrait)").matches,
@@ -70,10 +81,12 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
         // iOS Safari and locked-down embeds reject — fall through to the CSS layer
       }
     }
+    if (el) departureRef.current = capturePose(el);
     setPseudo(true);
   }, [targetRef]);
 
   const exit = useCallback(async () => {
+    if (pseudo && targetRef.current) departureRef.current = capturePose(targetRef.current);
     const doc = document as WebkitDocument;
     if (fullscreenElement()) {
       try {
@@ -84,7 +97,15 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
     }
     unlockOrientation();
     setPseudo(false);
-  }, []);
+  }, [pseudo, targetRef]);
+
+  // Runs after the classes flip but before paint, so the first painted frame is already the start pose.
+  // Native fullscreen is left alone: the browser and OS own that transition (and the rotation on Android).
+  useLayoutEffect(() => {
+    const departure = departureRef.current;
+    departureRef.current = null;
+    if (departure && targetRef.current) animateStage(targetRef.current, departure);
+  }, [pseudo, targetRef]);
 
   const active = native || pseudo;
   // iPhone can neither lock orientation nor go truly fullscreen, so while the phone is held

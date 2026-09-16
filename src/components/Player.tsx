@@ -101,6 +101,7 @@ export function Player({
   return (
     <div
       ref={stageRef}
+      data-covered={covered}
       className={[
         "player-stage relative aspect-video w-full overflow-hidden bg-black",
         fullscreen.active && "is-fullscreen",
