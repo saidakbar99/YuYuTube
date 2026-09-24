@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 const HOLD_MS = 3000;
 const TICK_MS = 50;
 
-export function RestScreen({ onUnlock }: { onUnlock: () => void }) {
+/** `emoji`: 🌙 for bedtime, 👋 when today's time is used up. */
+export function RestScreen({ emoji, onUnlock }: { emoji: string; onUnlock: () => void }) {
   const [held, setHeld] = useState(0);
   const timer = useRef<number | null>(null);
 
@@ -34,7 +35,7 @@ export function RestScreen({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div className="fixed inset-0 z-60 flex flex-col items-center justify-center bg-yt-bg px-8 text-center">
       <div role="img" aria-label="Time to rest" className="bob text-8xl">
-        {"🌙"}
+        {emoji}
       </div>
 
       <button

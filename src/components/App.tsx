@@ -10,9 +10,11 @@ import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
 import { videos, type Video } from "@/data/videos";
 import { useBackGuard } from "@/hooks/useBackGuard";
+import { useBedtime } from "@/hooks/useBedtime";
 import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
+import { recordPick } from "@/lib/favorites";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
 
@@ -26,9 +28,13 @@ export function App() {
   const playRef = useRef<(id: string) => void>(() => {});
   const failuresRef = useRef(0);
   const currentIdRef = useRef<string | null>(null);
+  // What may play right now (calm videos only at bedtime), and whether time is up.
+  // Refs, because the player's end/failure handlers are created before those are known.
+  const libraryRef = useRef<readonly Video[]>(videos);
+  const blockedRef = useRef(false);
 
   const goTo = useCallback((id: string) => {
-    const next = buildFeed(videos, id, pushRecent(id));
+    const next = buildFeed(libraryRef.current, id, pushRecent(id));
     feedRef.current = next;
     currentIdRef.current = id;
     setFeed(next);
@@ -36,24 +42,34 @@ export function App() {
     playRef.current(id);
   }, []);
 
+  // The feed can predate bedtime starting, so filter it by what is allowed now.
+  const nextAllowed = useCallback((except: string | null) => {
+    const allowed = new Set(libraryRef.current.map((v) => v.id));
+    return feedRef.current.find((v) => v.id !== except && allowed.has(v.id)) ?? null;
+  }, []);
+
   const handleEnded = useCallback(() => {
-    if (!config.autoplayNext) return;
+    // Time is up: stay on the finished video so the rest screen takes over.
+    if (!config.autoplayNext || blockedRef.current) return;
+    const current = currentIdRef.current;
     // With a one-video library the feed is empty; replay rather than stall on a dead poster.
-    const next = feedRef.current[0]?.id ?? currentIdRef.current;
+    const replayable = libraryRef.current.some((v) => v.id === current) ? current : null;
+    const next = nextAllowed(current)?.id ?? replayable;
     if (next) goTo(next);
-  }, [goTo]);
+  }, [goTo, nextAllowed]);
 
   const handleFailed = useCallback(
     (failedId: string | null) => {
+      if (blockedRef.current) return;
       failuresRef.current += 1;
-      const next = feedRef.current.find((v) => v.id !== failedId);
-      if (!next || failuresRef.current >= videos.length) {
+      const next = nextAllowed(failedId);
+      if (!next || failuresRef.current >= libraryRef.current.length) {
         setExhausted(true);
         return;
       }
       goTo(next.id);
     },
-    [goTo],
+    [goTo, nextAllowed],
   );
 
   const { containerRef, status, progress, play, pause, togglePlay } = useYouTubePlayer({
@@ -71,15 +87,41 @@ export function App() {
   }, [status]);
 
   const screenTime = useScreenTime(view === "watch" && status === "playing");
+  const bedtime = useBedtime();
   const online = useOnline();
 
+  const library = useMemo(() => (bedtime.active ? videos.filter((v) => v.calm) : videos), [bedtime.active]);
+  const bedtimeEmpty = bedtime.active && library.length === 0;
+
+  // Time is up (or it's bedtime with nothing calm to show). The video playing may finish
+  // first, so it ends gently, unless it runs on past the grace period.
+  const blocked = screenTime.reached || bedtimeEmpty;
+  const pastGrace = screenTime.overGrace || (bedtimeEmpty && bedtime.minutesIn >= config.graceMinutes);
+  const midVideo = view === "watch" && (status === "playing" || status === "loading");
+  const resting = blocked && (!midVideo || pastGrace);
+
   useEffect(() => {
-    if (screenTime.locked) pause();
-  }, [screenTime.locked, pause]);
+    libraryRef.current = library;
+    blockedRef.current = blocked;
+  });
+
+  useEffect(() => {
+    if (resting) pause();
+  }, [resting, pause]);
+
+  // Bedtime began during a lively video that is still going after the grace period: move to a calm one.
+  const currentAllowed = currentId === null || library.some((v) => v.id === currentId);
+  const overstaying =
+    bedtime.active && !bedtimeEmpty && !currentAllowed && bedtime.minutesIn >= config.graceMinutes;
+  useEffect(() => {
+    if (!overstaying || view !== "watch" || status !== "playing") return;
+    const next = nextAllowed(currentIdRef.current);
+    if (next) goTo(next.id);
+  }, [overstaying, view, status, nextAllowed, goTo]);
 
   // Native fullscreen paints only the fullscreen element, so any full-screen overlay
   // would be invisible behind it. Drop out of fullscreen before showing one.
-  const suspended = screenTime.locked || !online;
+  const suspended = resting || !online;
 
   const showHome = useCallback(() => {
     pause();
@@ -93,6 +135,7 @@ export function App() {
 
   const open = useCallback(
     (id: string) => {
+      recordPick(id);
       failuresRef.current = 0;
       setExhausted(false);
       goTo(id);
@@ -107,10 +150,30 @@ export function App() {
     showHome();
   }, [leaveWatch, showHome]);
 
+  // A tile he picked from the list under the player.
+  const choose = useCallback(
+    (id: string) => {
+      if (blockedRef.current) {
+        pause();
+        return;
+      }
+      recordPick(id);
+      goTo(id);
+    },
+    [goTo, pause],
+  );
+
   const playNext = useCallback(() => {
-    const next = feedRef.current[0];
+    const next = nextAllowed(currentIdRef.current);
     if (next) goTo(next.id);
-  }, [goTo]);
+  }, [goTo, nextAllowed]);
+
+  const visibleFeed = useMemo(() => (bedtime.active ? feed.filter((v) => v.calm) : feed), [feed, bedtime.active]);
+
+  const unlock = () => {
+    if (screenTime.reached) screenTime.reset();
+    if (bedtimeEmpty) bedtime.unlock();
+  };
 
   const replay = useCallback(() => {
     if (currentId) playRef.current(currentId);
@@ -134,11 +197,11 @@ export function App() {
     <main>
       <WatchScreen
         video={current}
-        feed={feed}
+        feed={visibleFeed}
         status={status}
         progress={progress}
         frameRef={containerRef}
-        onSelect={goTo}
+        onSelect={choose}
         onTogglePlay={togglePlay}
         onNext={playNext}
         onReplay={replay}
@@ -163,11 +226,11 @@ export function App() {
 
       {view === "home" && (
         <div className="fixed inset-0 z-50">
-          <HomeScreen onSelect={open} />
+          <HomeScreen onSelect={open} calmOnly={bedtime.active} />
         </div>
       )}
 
-      {screenTime.locked && <RestScreen onUnlock={screenTime.unlock} />}
+      {resting && <RestScreen emoji={bedtimeEmpty ? "🌙" : "👋"} onUnlock={unlock} />}
       {!online && <OfflineNotice />}
       {back.confirming && <BackExitNotice />}
     </main>

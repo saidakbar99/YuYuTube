@@ -27,7 +27,18 @@ Exits non-zero and names the offending IDs if any are removed, private, or embed
 | `autoplayNext` | `true` | roll straight into the next video, else show a "watch again / pick another" card |
 | `recentWindow` | `5` | how many recently-watched IDs get pushed to the end of the feed |
 | `maxVolume` | `60` | 0–100 cap on the player's volume. iOS ignores it (Safari blocks programmatic volume) — on iPhone use Settings → Sounds & Haptics → Headphone Safety → Reduce Loud Audio |
-| `screenTimeLimitMinutes` | `null` | `null` is off. When set, playback time accumulates per day and locks to a "time to rest" screen; unlock by pressing and holding the bottom-right corner button for 3s |
+| `screenTimeLimitMinutes` | `60` | `null` is off. Playback time accumulates per day (resets at midnight). When it runs out, the current video finishes and a 👋 rest screen follows; unlock (another full period) by pressing and holding the bottom-right corner button for 3s |
+| `graceMinutes` | `10` | how long a video may keep going after time is up or bedtime starts, before it is stopped anyway (long compilations) |
+| `bedtime` | `20:00`–`07:00` | `null` is off. During it only videos marked `calm: true` in `videos.ts` are shown; if none are marked, a 🌙 screen follows the current video. The corner hold unlocks the full library for the rest of that night |
+| `favoritesOnTop` | `4` | how many of his most-picked videos lead the home screen. Picks fade as new ones come in, so it follows current favorites |
+
+Mark a bedtime video with `calm: true`:
+
+```ts
+{ id: "4cXrmtd01Fc", title: "Going to Sleep", calm: true },
+```
+
+Tapping the playing video gives a short vibration along with the emoji (Android only; iOS has no web vibration API).
 
 ## Commands
 

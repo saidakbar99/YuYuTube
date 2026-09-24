@@ -93,6 +93,12 @@ export function Player({
       const emoji = SPARKLE_EMOJI[Math.floor(Math.random() * SPARKLE_EMOJI.length)];
       const sparkle = { ...point, id: sparkleId.current, emoji };
       setSparkles((list) => [...list.slice(-(MAX_SPARKLES - 1)), sparkle]);
+      // A tiny buzz with it. Android only: iOS has no vibration API for web pages.
+      try {
+        navigator.vibrate?.(15);
+      } catch {
+        // not allowed here
+      }
     },
     onLongPress: wake,
     onSwipeUp: () => {

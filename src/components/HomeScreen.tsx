@@ -18,8 +18,9 @@ function Logo() {
   );
 }
 
-export function HomeScreen({ onSelect }: { onSelect: (id: string) => void }) {
+export function HomeScreen({ onSelect, calmOnly }: { onSelect: (id: string) => void; calmOnly: boolean }) {
   const order = useSyncExternalStore(subscribeHomeOrder, getHomeOrder, getServerHomeOrder);
+  const shown = calmOnly ? order.filter((v) => v.calm) : order;
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   return (
@@ -36,7 +37,7 @@ export function HomeScreen({ onSelect }: { onSelect: (id: string) => void }) {
             order === getServerHomeOrder() ? "opacity-0" : "opacity-100"
           }`}
         >
-          {order.map((video) => (
+          {shown.map((video) => (
             <VideoCard key={video.id} video={video} onSelect={onSelect} />
           ))}
         </div>
