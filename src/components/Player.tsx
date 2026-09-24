@@ -1,22 +1,27 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { config } from "@/config";
 import type { Video } from "@/data/videos";
 import type { PlayerStatus } from "@/hooks/useYouTubePlayer";
-import { useGestures } from "@/hooks/useGestures";
+import { useGestures, type LocalPoint } from "@/hooks/useGestures";
 import type { useFullscreen } from "@/hooks/useFullscreen";
 import { Thumbnail } from "@/components/Thumbnail";
 import {
   ChevronDownIcon,
   CollapseIcon,
   ExpandIcon,
+  HomeIcon,
   NextIcon,
   PauseIcon,
   PlayIcon,
 } from "@/components/PlayerIcons";
 
 const HIDE_CONTROLS_MS = 3000;
+const MAX_SPARKLES = 8;
+const SPARKLE_EMOJI = ["⭐", "🌟", "💖", "🎈", "🫧", "🦋"];
+
+type Sparkle = LocalPoint & { id: number; emoji: string };
 
 function clock(seconds: number) {
   const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
@@ -54,44 +59,55 @@ export function Player({
   onReplay,
   onHome,
 }: Props) {
-  const [controlsShown, setControlsShown] = useState(true);
+  // Set only by a parent (long-press, or using a control). While a video plays the
+  // controls stay hidden otherwise, so a toddler never sees a pause button to hit.
+  const [woken, setWoken] = useState(false);
   const [shownFor, setShownFor] = useState(video?.id);
 
   if (video?.id !== shownFor) {
     setShownFor(video?.id);
-    setControlsShown(true);
+    setWoken(false);
   }
 
-  const wake = () => setControlsShown(true);
+  const controlsShown = woken || status !== "playing";
+
+  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
+  const sparkleId = useRef(0);
+
+  const wake = () => setWoken(true);
+  // Hidden buttons must not catch a stray tap.
+  const interactive = controlsShown ? "pointer-events-auto" : "pointer-events-none";
   // Tapping a control counts as interaction, so the 3s hide timer restarts too.
   const withWake = (action: () => void) => () => {
     wake();
     action();
   };
   const gestures = useGestures({
-    onTap: () => {
-      wake();
-      onTogglePlay();
+    // While playing, a tap is just for fun — only a parent's long-press can change playback.
+    onTap: (point) => {
+      if (status !== "playing") {
+        onTogglePlay();
+        return;
+      }
+      sparkleId.current += 1;
+      const emoji = SPARKLE_EMOJI[Math.floor(Math.random() * SPARKLE_EMOJI.length)];
+      const sparkle = { ...point, id: sparkleId.current, emoji };
+      setSparkles((list) => [...list.slice(-(MAX_SPARKLES - 1)), sparkle]);
     },
+    onLongPress: wake,
     onSwipeUp: () => {
-      wake();
       if (!fullscreen.active) fullscreen.enter();
     },
     onSwipeDown: () => {
-      wake();
       if (fullscreen.active) fullscreen.exit();
-    },
-    onSwipeLeft: () => {
-      wake();
-      onNext();
     },
   }, fullscreen.rotated);
 
   useEffect(() => {
-    if (status !== "playing" || !controlsShown) return;
-    const timer = window.setTimeout(() => setControlsShown(false), HIDE_CONTROLS_MS);
+    if (status !== "playing" || !woken) return;
+    const timer = window.setTimeout(() => setWoken(false), HIDE_CONTROLS_MS);
     return () => window.clearTimeout(timer);
-  }, [status, controlsShown]);
+  }, [status, woken]);
 
   const covered = status !== "playing";
   const showEndCard = status === "ended" && !config.autoplayNext;
@@ -125,6 +141,19 @@ export function Player({
 
       <div {...gestures} className="absolute inset-0 z-20 touch-none" />
 
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-25 overflow-hidden">
+        {sparkles.map((s) => (
+          <span
+            key={s.id}
+            className="sparkle absolute text-5xl"
+            style={{ left: s.x, top: s.y }}
+            onAnimationEnd={() => setSparkles((list) => list.filter((item) => item.id !== s.id))}
+          >
+            {s.emoji}
+          </span>
+        ))}
+      </div>
+
       {!showEndCard && !showStallCard && (
         <div
           className={`player-controls pointer-events-none absolute inset-0 z-30 transition-opacity duration-200 ${
@@ -136,7 +165,7 @@ export function Player({
               type="button"
               onClick={onHome}
               aria-label="Back to home"
-              className="pointer-events-auto flex size-12 items-center justify-center rounded-full text-white active:bg-white/20"
+              className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
             >
               <ChevronDownIcon className="size-7" />
             </button>
@@ -153,9 +182,10 @@ export function Player({
             ) : (
               <button
                 type="button"
-                onClick={withWake(onTogglePlay)}
+                // Resuming is for anyone; only a parent pausing should keep the controls up.
+                onClick={status === "playing" ? withWake(onTogglePlay) : onTogglePlay}
                 aria-label={status === "playing" ? "Pause" : "Play"}
-                className="pointer-events-auto flex size-22 items-center justify-center rounded-full bg-black/40 text-white transition-transform duration-100 active:scale-90 sm:size-26"
+                className={`${interactive} flex size-22 items-center justify-center rounded-full bg-black/40 text-white transition-transform duration-100 active:scale-90 sm:size-26`}
               >
                 {status === "playing" ? (
                   <PauseIcon className="size-12 sm:size-14" />
@@ -177,7 +207,7 @@ export function Player({
                     type="button"
                     onClick={withWake(onNext)}
                     aria-label="Next video"
-                    className="pointer-events-auto flex size-12 items-center justify-center rounded-full text-white active:bg-white/20"
+                    className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
                   >
                     <NextIcon className="size-6" />
                   </button>
@@ -186,7 +216,7 @@ export function Player({
                   type="button"
                   onClick={withWake(fullscreen.toggle)}
                   aria-label={fullscreen.active ? "Exit fullscreen" : "Fullscreen"}
-                  className="pointer-events-auto flex size-12 items-center justify-center rounded-full text-white active:bg-white/20"
+                  className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
                 >
                   {fullscreen.active ? <CollapseIcon className="size-6" /> : <ExpandIcon className="size-6" />}
                 </button>
@@ -203,42 +233,45 @@ export function Player({
       )}
 
       {showStallCard && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-black/85 px-6 text-center">
-          <p className="text-base font-medium text-white sm:text-lg">This video got stuck.</p>
+        <div className="absolute inset-0 z-40 flex items-center justify-center gap-6 bg-black/85 px-6">
           <button
             type="button"
             onClick={onReplay}
-            className="rounded-full bg-white px-7 py-3.5 text-base font-medium text-black transition-transform duration-100 active:scale-95"
+            aria-label="Try again"
+            className="flex size-24 items-center justify-center rounded-full bg-white text-5xl transition-transform duration-100 active:scale-90"
           >
-            Try again
+            🔄
           </button>
           {hasNext && (
             <button
               type="button"
               onClick={onNext}
-              className="rounded-full border border-white/25 px-7 py-3.5 text-base font-medium text-white transition-transform duration-100 active:scale-95"
+              aria-label="Play the next one"
+              className="flex size-24 items-center justify-center rounded-full bg-white/15 text-white transition-transform duration-100 active:scale-90"
             >
-              Play the next one
+              <NextIcon className="size-12" />
             </button>
           )}
         </div>
       )}
 
       {showEndCard && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-black/85 px-6">
+        <div className="absolute inset-0 z-40 flex items-center justify-center gap-6 bg-black/85 px-6">
           <button
             type="button"
             onClick={onReplay}
-            className="flex items-center gap-3 rounded-full bg-white px-7 py-3.5 text-base font-medium text-black transition-transform duration-100 active:scale-95"
+            aria-label="Watch again"
+            className="flex size-24 items-center justify-center rounded-full bg-white text-black transition-transform duration-100 active:scale-90"
           >
-            <PlayIcon className="size-5" /> Watch again
+            <PlayIcon className="size-12" />
           </button>
           <button
             type="button"
             onClick={onHome}
-            className="rounded-full border border-white/25 px-7 py-3.5 text-base font-medium text-white transition-transform duration-100 active:scale-95"
+            aria-label="Pick another"
+            className="flex size-24 items-center justify-center rounded-full bg-white/15 text-white transition-transform duration-100 active:scale-90"
           >
-            Pick another
+            <HomeIcon filled className="size-12" />
           </button>
         </div>
       )}

@@ -93,19 +93,10 @@ export function WatchScreen({
           ref={feedRef}
           className="flex-1 pb-32 md:landscape:w-[35%] md:landscape:overflow-y-auto md:landscape:overscroll-contain"
         >
-          <h1 className="px-4 py-4 text-lg font-semibold leading-6 text-yt-text sm:text-xl">
-            {video?.title ?? ""}
-          </h1>
-
-          <div className="h-px bg-white/10" />
-
-          <div className="px-3 pt-4">
-            <p className="px-1 pb-3 text-base font-medium text-yt-muted">More videos</p>
-            <div className="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 md:landscape:grid-cols-1">
-              {feed.map((item) => (
-                <VideoCard key={item.id} video={item} onSelect={select} compact />
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-3 px-3 pt-3 sm:gap-4 md:landscape:grid-cols-1">
+            {feed.map((item) => (
+              <VideoCard key={item.id} video={item} onSelect={select} />
+            ))}
           </div>
         </div>
       )}

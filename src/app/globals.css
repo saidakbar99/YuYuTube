@@ -96,3 +96,52 @@
     width: 133.334%;
   }
 }
+
+/* A toddler's tap on the playing video: pops up where the finger was, floats and fades. */
+.sparkle {
+  translate: -50% -50%;
+  animation: sparkle 700ms ease-out forwards;
+}
+
+@keyframes sparkle {
+  0% {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(1.4);
+    opacity: 0;
+  }
+}
+
+.bob {
+  animation: bob 3s ease-in-out infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkle {
+    animation-name: sparkle-fade;
+  }
+
+  .bob {
+    animation: none;
+  }
+}
+
+@keyframes sparkle-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

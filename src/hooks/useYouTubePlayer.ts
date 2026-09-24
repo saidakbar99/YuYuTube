@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { config } from "@/config";
 import { PLAYER_VARS, SKIPPABLE_ERRORS, loadYouTubeApi } from "@/lib/youtube";
 
 export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "ended" | "error" | "stalled";
@@ -16,6 +17,14 @@ type Handlers = {
   /** Cued (not played) at startup so the very first tap has a warm player. */
   preloadId?: string;
 };
+
+function capVolume(player: YT.Player | null) {
+  try {
+    player?.setVolume(config.maxVolume);
+  } catch {
+    // player not ready — the next PLAYING event applies it
+  }
+}
 
 export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +102,7 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
         events: {
           onReady: () => {
             readyRef.current = true;
+            capVolume(playerRef.current);
             const queued = pendingRef.current;
             pendingRef.current = null;
             if (queued) playerRef.current?.loadVideoById(queued);
@@ -101,6 +111,8 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
             if (endFiredRef.current) return;
             switch (event.data) {
               case api.PlayerState.PLAYING:
+                // Re-applied per video: a fresh load can come back at full volume.
+                capVolume(playerRef.current);
                 setStatus("playing");
                 break;
               case api.PlayerState.PAUSED:

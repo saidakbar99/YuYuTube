@@ -33,9 +33,9 @@ export function RestScreen({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="fixed inset-0 z-60 flex flex-col items-center justify-center bg-yt-bg px-8 text-center">
-      <div className="text-6xl">{"🌙"}</div>
-      <h2 className="mt-6 text-2xl font-semibold text-yt-text">Time to rest</h2>
-      <p className="mt-2 max-w-sm text-base text-yt-muted">All done for now. Let&rsquo;s do something else!</p>
+      <div role="img" aria-label="Time to rest" className="bob text-8xl">
+        {"🌙"}
+      </div>
 
       <button
         type="button"

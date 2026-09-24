@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HomeScreen } from "@/components/HomeScreen";
 import { OfflineNotice } from "@/components/OfflineNotice";
+import { HomeIcon } from "@/components/PlayerIcons";
 import { RestScreen } from "@/components/RestScreen";
 import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
@@ -134,15 +135,15 @@ export function App() {
       />
 
       {exhausted && view === "watch" && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-yt-bg px-8 text-center">
-          <div className="text-6xl">🙈</div>
-          <p className="max-w-sm text-lg text-yt-muted">This one is not working right now.</p>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-yt-bg px-8">
+          <div className="text-7xl">🙈</div>
           <button
             type="button"
             onClick={goHome}
-            className="rounded-full bg-white px-7 py-3.5 text-base font-medium text-black transition-transform duration-100 active:scale-95"
+            aria-label="Pick another"
+            className="flex size-24 items-center justify-center rounded-full bg-white text-black transition-transform duration-100 active:scale-90"
           >
-            Pick another
+            <HomeIcon filled className="size-12" />
           </button>
         </div>
       )}

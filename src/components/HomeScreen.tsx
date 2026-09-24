@@ -32,7 +32,7 @@ export function HomeScreen({ onSelect }: { onSelect: (id: string) => void }) {
         {/* The prerendered HTML holds the unshuffled order; fade in once the
             client store takes over so the reorder is not a visible jump. */}
         <div
-          className={`grid grid-cols-1 gap-x-5 gap-y-7 transition-opacity duration-300 min-[420px]:grid-cols-2 md:grid-cols-2 md:landscape:grid-cols-3 ${
+          className={`grid grid-cols-2 gap-3 transition-opacity duration-300 sm:gap-5 md:landscape:grid-cols-3 ${
             order === getServerHomeOrder() ? "opacity-0" : "opacity-100"
           }`}
         >
