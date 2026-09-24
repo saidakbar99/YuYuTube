@@ -30,6 +30,9 @@ Exits non-zero and names the offending IDs if any are removed, private, or embed
 | `screenTimeLimitMinutes` | `60` | `null` is off. Playback time accumulates per day (resets at midnight). When it runs out, the current video finishes and a 👋 rest screen follows; unlock (another full period) by pressing and holding the bottom-right corner button for 3s |
 | `graceMinutes` | `10` | how long a video may keep going after time is up or bedtime starts, before it is stopped anyway (long compilations) |
 | `bedtime` | `20:00`–`07:00` | `null` is off. During it only videos marked `calm: true` in `videos.ts` are shown; if none are marked, a 🌙 screen follows the current video. The corner hold unlocks the full library for the rest of that night |
+| `eveningFrom` | `18:00` | `null` is off. From then the whole screen, videos included, takes a warm tint (less blue light), fading in over a minute; stronger during `bedtime` |
+| `boardEvery` | `3` | `null` is off. After this many videos, a tap-and-hear break comes before the next one: big pictures (animals, fruit, vehicles, sky) that pop, bounce and say their name in Uzbek. Words and pictures live in `src/data/board.ts` |
+| `boardSeconds` | `30` | how long the break lasts; then the next video plays by itself. The break does not count as screen time |
 | `favoritesOnTop` | `4` | how many of his most-picked videos lead the home screen. Picks fade as new ones come in, so it follows current favorites |
 
 Mark a bedtime video with `calm: true`:

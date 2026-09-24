@@ -34,13 +34,13 @@ export function RestScreen({ emoji, onUnlock }: { emoji: string; onUnlock: () =>
 
   return (
     <div className="fixed inset-0 z-60 flex flex-col items-center justify-center bg-yt-bg px-8 text-center">
-      <div role="img" aria-label="Time to rest" className="bob text-8xl">
+      <div role="img" aria-label="Dam olish vaqti" className="bob text-8xl">
         {emoji}
       </div>
 
       <button
         type="button"
-        aria-label="Parent unlock: press and hold"
+        aria-label="Ota-ona uchun: bosib turing"
         onPointerDown={start}
         onPointerUp={stop}
         onPointerLeave={stop}

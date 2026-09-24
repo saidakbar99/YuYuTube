@@ -31,7 +31,6 @@ export const videos: Video[] = [
   { id: "-cJu5dlnlYM", title: "Alif Arnab", calm: true },
   { id: "4cXrmtd01Fc", title: "Going to Sleep", calm: true },
   { id: "vy2-1Tv5H9A", title: "Wudhu", calm: true },
-  { id: "kbddnbC8O9k", title: "Baby Islamic cartoon", calm: true },
   // { id: "", title: "" },
   // { id: "", title: "" },
   // { id: "", title: "" },

@@ -15,7 +15,7 @@ export function BottomNav({ active, onHome }: { active: boolean; onHome: () => v
         >
           <HomeIcon filled={active} className={`size-6 ${active ? "text-yt-text" : "text-yt-muted"}`} />
           <span className={`text-[11px] leading-none ${active ? "font-medium text-yt-text" : "text-yt-muted"}`}>
-            Home
+            Bosh sahifa
           </span>
         </button>
       </div>

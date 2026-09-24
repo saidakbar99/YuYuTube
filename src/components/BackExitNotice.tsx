@@ -6,7 +6,7 @@ export function BackExitNotice() {
     >
       <div className="flex items-center gap-2.5 rounded-full bg-yt-elevated px-5 py-3 text-base font-medium text-yt-text shadow-lg shadow-black/50">
         <span className="text-xl">{"👋"}</span>
-        Press back again to leave
+        Chiqish uchun yana bir marta orqaga bosing
       </div>
     </div>
   );

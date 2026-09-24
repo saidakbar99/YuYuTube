@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "YuYuTube",
-  description: "A private, hand-picked video player.",
+  description: "Shaxsiy, tanlab olingan videolar.",
   robots: { index: false, follow: false, nocache: true },
   appleWebApp: { capable: true, title: "YuYuTube", statusBarStyle: "black-translucent" },
   // Next emits the modern `mobile-web-app-capable`; older iPadOS still wants this one.
@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="uz">
       <body className="antialiased">
         {children}
         <ServiceWorker />

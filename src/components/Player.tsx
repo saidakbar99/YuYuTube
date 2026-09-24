@@ -6,6 +6,7 @@ import type { Video } from "@/data/videos";
 import type { PlayerStatus } from "@/hooks/useYouTubePlayer";
 import { useGestures, type LocalPoint } from "@/hooks/useGestures";
 import type { useFullscreen } from "@/hooks/useFullscreen";
+import { NightTint } from "@/components/NightTint";
 import { Thumbnail } from "@/components/Thumbnail";
 import {
   ChevronDownIcon,
@@ -170,7 +171,7 @@ export function Player({
             <button
               type="button"
               onClick={onHome}
-              aria-label="Back to home"
+              aria-label="Bosh sahifaga"
               className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
             >
               <ChevronDownIcon className="size-7" />
@@ -181,7 +182,7 @@ export function Player({
           <div className="absolute inset-0 flex items-center justify-center">
             {status === "loading" ? (
               <div
-                aria-label="Loading"
+                aria-label="Yuklanmoqda"
                 role="status"
                 className="size-14 animate-spin rounded-full border-4 border-white/25 border-t-white sm:size-16"
               />
@@ -190,7 +191,7 @@ export function Player({
                 type="button"
                 // Resuming is for anyone; only a parent pausing should keep the controls up.
                 onClick={status === "playing" ? withWake(onTogglePlay) : onTogglePlay}
-                aria-label={status === "playing" ? "Pause" : "Play"}
+                aria-label={status === "playing" ? "Pauza" : "Ijro etish"}
                 className={`${interactive} flex size-22 items-center justify-center rounded-full bg-black/40 text-white transition-transform duration-100 active:scale-90 sm:size-26`}
               >
                 {status === "playing" ? (
@@ -212,7 +213,7 @@ export function Player({
                   <button
                     type="button"
                     onClick={withWake(onNext)}
-                    aria-label="Next video"
+                    aria-label="Keyingi video"
                     className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
                   >
                     <NextIcon className="size-6" />
@@ -221,7 +222,7 @@ export function Player({
                 <button
                   type="button"
                   onClick={withWake(fullscreen.toggle)}
-                  aria-label={fullscreen.active ? "Exit fullscreen" : "Fullscreen"}
+                  aria-label={fullscreen.active ? "To'liq ekrandan chiqish" : "To'liq ekran"}
                   className={`${interactive} flex size-12 items-center justify-center rounded-full text-white active:bg-white/20`}
                 >
                   {fullscreen.active ? <CollapseIcon className="size-6" /> : <ExpandIcon className="size-6" />}
@@ -238,12 +239,15 @@ export function Player({
         </div>
       )}
 
+      {/* Native fullscreen paints only this element, so the page-wide warm tint needs a copy in here. */}
+      {fullscreen.active && !fullscreen.pseudo && <NightTint className="absolute inset-0 z-45" />}
+
       {showStallCard && (
         <div className="absolute inset-0 z-40 flex items-center justify-center gap-6 bg-black/85 px-6">
           <button
             type="button"
             onClick={onReplay}
-            aria-label="Try again"
+            aria-label="Qayta urinish"
             className="flex size-24 items-center justify-center rounded-full bg-white text-5xl transition-transform duration-100 active:scale-90"
           >
             🔄
@@ -252,7 +256,7 @@ export function Player({
             <button
               type="button"
               onClick={onNext}
-              aria-label="Play the next one"
+              aria-label="Keyingisini qo'yish"
               className="flex size-24 items-center justify-center rounded-full bg-white/15 text-white transition-transform duration-100 active:scale-90"
             >
               <NextIcon className="size-12" />
@@ -266,7 +270,7 @@ export function Player({
           <button
             type="button"
             onClick={onReplay}
-            aria-label="Watch again"
+            aria-label="Yana ko'rish"
             className="flex size-24 items-center justify-center rounded-full bg-white text-black transition-transform duration-100 active:scale-90"
           >
             <PlayIcon className="size-12" />
@@ -274,7 +278,7 @@ export function Player({
           <button
             type="button"
             onClick={onHome}
-            aria-label="Pick another"
+            aria-label="Boshqasini tanlash"
             className="flex size-24 items-center justify-center rounded-full bg-white/15 text-white transition-transform duration-100 active:scale-90"
           >
             <HomeIcon filled className="size-12" />

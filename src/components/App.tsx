@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackExitNotice } from "@/components/BackExitNotice";
 import { HomeScreen } from "@/components/HomeScreen";
 import { OfflineNotice } from "@/components/OfflineNotice";
+import { NightTint } from "@/components/NightTint";
 import { HomeIcon } from "@/components/PlayerIcons";
 import { RestScreen } from "@/components/RestScreen";
+import { TapBoard } from "@/components/TapBoard";
 import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
 import { videos, type Video } from "@/data/videos";
@@ -15,6 +17,7 @@ import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
 import { recordPick } from "@/lib/favorites";
+import { playLaunchJingle } from "@/lib/jingle";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
 
@@ -23,6 +26,8 @@ export function App() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [feed, setFeed] = useState<Video[]>([]);
   const [exhausted, setExhausted] = useState(false);
+  // Set while the tap-and-hear break is up: the video to play once it's over.
+  const [boardNext, setBoardNext] = useState<string | null>(null);
 
   const feedRef = useRef<Video[]>([]);
   const playRef = useRef<(id: string) => void>(() => {});
@@ -32,9 +37,12 @@ export function App() {
   // Refs, because the player's end/failure handlers are created before those are known.
   const libraryRef = useRef<readonly Video[]>(videos);
   const blockedRef = useRef(false);
+  const sinceBoardRef = useRef(0);
+  const boardNextRef = useRef<string | null>(null);
 
   const goTo = useCallback((id: string) => {
     const next = buildFeed(libraryRef.current, id, pushRecent(id));
+    sinceBoardRef.current += 1;
     feedRef.current = next;
     currentIdRef.current = id;
     setFeed(next);
@@ -55,6 +63,24 @@ export function App() {
     // With a one-video library the feed is empty; replay rather than stall on a dead poster.
     const replayable = libraryRef.current.some((v) => v.id === current) ? current : null;
     const next = nextAllowed(current)?.id ?? replayable;
+    if (!next) return;
+    // Every few videos, a break to tap and hear before the next one.
+    if (config.boardEvery !== null && sinceBoardRef.current >= config.boardEvery) {
+      setBoardNext(next);
+      return;
+    }
+    goTo(next);
+  }, [goTo, nextAllowed]);
+
+  const finishBoard = useCallback(() => {
+    const planned = boardNextRef.current;
+    sinceBoardRef.current = 0;
+    setBoardNext(null);
+    // Time ran out during the break: stay put and let the rest screen take over.
+    if (!planned || blockedRef.current) return;
+    // Bedtime may have started meanwhile, so re-check that the planned video is still allowed.
+    const stillAllowed = libraryRef.current.some((v) => v.id === planned);
+    const next = stillAllowed ? planned : nextAllowed(currentIdRef.current)?.id;
     if (next) goTo(next);
   }, [goTo, nextAllowed]);
 
@@ -103,6 +129,7 @@ export function App() {
   useEffect(() => {
     libraryRef.current = library;
     blockedRef.current = blocked;
+    boardNextRef.current = boardNext;
   });
 
   useEffect(() => {
@@ -121,10 +148,11 @@ export function App() {
 
   // Native fullscreen paints only the fullscreen element, so any full-screen overlay
   // would be invisible behind it. Drop out of fullscreen before showing one.
-  const suspended = resting || !online;
+  const suspended = resting || !online || boardNext !== null;
 
   const showHome = useCallback(() => {
     pause();
+    setBoardNext(null);
     reshuffleHome();
     setView("home");
   }, [pause]);
@@ -181,6 +209,9 @@ export function App() {
 
   const current = useMemo(() => videos.find((v) => v.id === currentId) ?? null, [currentId]);
 
+  // "Yu-Yu!" as the app opens, right after Android's icon splash.
+  useEffect(() => playLaunchJingle(), []);
+
   useEffect(() => {
     const block = (event: Event) => event.preventDefault();
     for (const type of ["contextmenu", "dragstart", "gesturestart"]) {
@@ -216,13 +247,15 @@ export function App() {
           <button
             type="button"
             onClick={goHome}
-            aria-label="Pick another"
+            aria-label="Boshqasini tanlash"
             className="flex size-24 items-center justify-center rounded-full bg-white text-black transition-transform duration-100 active:scale-90"
           >
             <HomeIcon filled className="size-12" />
           </button>
         </div>
       )}
+
+      {boardNext !== null && view === "watch" && <TapBoard onDone={finishBoard} />}
 
       {view === "home" && (
         <div className="fixed inset-0 z-50">
@@ -233,6 +266,7 @@ export function App() {
       {resting && <RestScreen emoji={bedtimeEmpty ? "🌙" : "👋"} onUnlock={unlock} />}
       {!online && <OfflineNotice />}
       {back.confirming && <BackExitNotice />}
+      <NightTint />
     </main>
   );
 }

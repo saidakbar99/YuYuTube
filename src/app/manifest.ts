@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "YuYuTube",
     short_name: "YuYuTube",
-    description: "A private, hand-picked video player.",
+    description: "Shaxsiy, tanlab olingan videolar.",
     start_url: "/",
     scope: "/",
     display: "standalone",

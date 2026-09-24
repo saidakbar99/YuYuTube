@@ -1,8 +1,8 @@
-const VERSION = "yuyutube-v3";
+const VERSION = "yuyutube-v4";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
 
-const OFFLINE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+const OFFLINE_HTML = `<!doctype html><html lang="uz"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>YuYuTube</title><style>
 html,body{height:100%;margin:0;background:#0f0f0f;font-family:Roboto,Arial,sans-serif;
@@ -10,7 +10,7 @@ display:flex;flex-direction:column;align-items:center;justify-content:center;tex
 -webkit-user-select:none;user-select:none}
 h1{font-size:1.5rem;font-weight:600;margin:1.5rem 0 .5rem}p{font-size:1rem;color:#aaa;max-width:22rem;padding:0 1.5rem}
 </style></head><body><div style="font-size:4.5rem">&#9729;&#65039;</div>
-<h1>No internet</h1><p>The videos are taking a nap. They&rsquo;ll be back when the internet comes home.</p></body></html>`;
+<h1>Internet yo&lsquo;q</h1><p>Videolar uxlab qoldi. Internet qaytganda ular ham qaytadi.</p></body></html>`;
 
 const offlinePage = () =>
   new Response(OFFLINE_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } });
