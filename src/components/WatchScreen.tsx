@@ -93,7 +93,7 @@ export function WatchScreen({
           ref={feedRef}
           className="flex-1 pb-32 md:landscape:w-[35%] md:landscape:overflow-y-auto md:landscape:overscroll-contain"
         >
-          <div className="grid grid-cols-2 gap-3 px-3 pt-3 sm:gap-4 md:landscape:grid-cols-1">
+          <div className="grid grid-cols-1 gap-4 px-3 pt-3 md:grid-cols-2 md:landscape:grid-cols-1">
             {feed.map((item) => (
               <VideoCard key={item.id} video={item} onSelect={select} />
             ))}

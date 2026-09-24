@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BackExitNotice } from "@/components/BackExitNotice";
 import { HomeScreen } from "@/components/HomeScreen";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { HomeIcon } from "@/components/PlayerIcons";
@@ -8,6 +9,7 @@ import { RestScreen } from "@/components/RestScreen";
 import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
 import { videos, type Video } from "@/data/videos";
+import { useBackGuard } from "@/hooks/useBackGuard";
 import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
@@ -70,6 +72,7 @@ export function App() {
 
   const screenTime = useScreenTime(view === "watch" && status === "playing");
   const online = useOnline();
+  const confirmingExit = useBackGuard();
 
   useEffect(() => {
     if (screenTime.locked) pause();
@@ -156,6 +159,7 @@ export function App() {
 
       {screenTime.locked && <RestScreen onUnlock={screenTime.unlock} />}
       {!online && <OfflineNotice />}
+      {confirmingExit && <BackExitNotice />}
     </main>
   );
 }
