@@ -72,7 +72,6 @@ export function App() {
 
   const screenTime = useScreenTime(view === "watch" && status === "playing");
   const online = useOnline();
-  const confirmingExit = useBackGuard();
 
   useEffect(() => {
     if (screenTime.locked) pause();
@@ -82,21 +81,31 @@ export function App() {
   // would be invisible behind it. Drop out of fullscreen before showing one.
   const suspended = screenTime.locked || !online;
 
+  const showHome = useCallback(() => {
+    pause();
+    reshuffleHome();
+    setView("home");
+  }, [pause]);
+
+  // Back on the watch screen returns home; back on home asks for a second press before leaving.
+  const back = useBackGuard(showHome);
+  const { enterWatch, leaveWatch } = back;
+
   const open = useCallback(
     (id: string) => {
       failuresRef.current = 0;
       setExhausted(false);
       goTo(id);
       setView("watch");
+      enterWatch();
     },
-    [goTo],
+    [goTo, enterWatch],
   );
 
   const goHome = useCallback(() => {
-    pause();
-    reshuffleHome();
-    setView("home");
-  }, [pause]);
+    leaveWatch();
+    showHome();
+  }, [leaveWatch, showHome]);
 
   const playNext = useCallback(() => {
     const next = feedRef.current[0];
@@ -134,7 +143,8 @@ export function App() {
         onNext={playNext}
         onReplay={replay}
         onHome={goHome}
-        suspended={suspended}
+        // Also covers the back button, which reaches home without passing through WatchScreen.
+        suspended={suspended || view === "home"}
       />
 
       {exhausted && view === "watch" && (
@@ -159,7 +169,7 @@ export function App() {
 
       {screenTime.locked && <RestScreen onUnlock={screenTime.unlock} />}
       {!online && <OfflineNotice />}
-      {confirmingExit && <BackExitNotice />}
+      {back.confirming && <BackExitNotice />}
     </main>
   );
 }
