@@ -10,13 +10,19 @@ One line in `src/data/videos.ts`, then push:
 { id: "XqZsoesa55w", title: "Baby Shark Dance" },
 ```
 
+To skip a channel intro or a "subscribe!" outro, give the part to play (`"m:ss"` or seconds):
+
+```ts
+{ id: "XqZsoesa55w", title: "Baby Shark Dance", start: "0:08", end: "2:15" },
+```
+
 Check the whole library is still playable and embeddable:
 
 ```
 npm run check-videos
 ```
 
-Exits non-zero and names the offending IDs if any are removed, private, or embedding-disabled.
+Exits non-zero and names the offending IDs if any are removed, private, or embedding-disabled, or have a mistyped `start`/`end`.
 
 ## Config
 
@@ -62,6 +68,7 @@ Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env
 
 - Player host is `youtube-nocookie.com`, controls off, and a transparent overlay covers the iframe at all times so no tap reaches YouTube's UI.
 - Built for a toddler: a tap on the video pauses or resumes it and shows the controls for 3s (hidden controls can't be tapped). Every touch anywhere in the app pops a sparkle emoji; taps on the video also buzz (Android). Swipe up/down toggles fullscreen; swiping sideways does nothing.
+- The first video after opening the app is preceded by a spoken "Bismillah", and the 👋/🌙 rest screen by "Alhamdulillah" (recordings in `public/sounds/`, credits in `CREDITS.md` there).
 - The UI is picture-only: no titles on cards, and icon buttons instead of text on the stall, end and error screens. Titles in `videos.ts` are still used as accessibility labels.
 - Pause and the last ~0.5s of playback are covered by an opaque layer, so suggestions and the end screen are never on screen.
 - `rel: 0` no longer removes related videos (YouTube changed this in 2018) — the overlay and the pause/end covers are what actually keep them out of reach.

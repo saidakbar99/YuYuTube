@@ -1,5 +1,9 @@
-/** `calm`: still shown at bedtime (see `config.bedtime`). */
-export type Video = { id: string; title: string; calm?: boolean };
+/**
+ * `calm`: still shown at bedtime (see `config.bedtime`).
+ * `start` / `end`: play only that part, e.g. `start: "0:08", end: "2:15"` skips a channel intro
+ * and a "subscribe!" outro. Seconds (`8`) work too.
+ */
+export type Video = { id: string; title: string; calm?: boolean; start?: number | string; end?: number | string };
 
 export const videos: Video[] = [
   { id: "BNTn55I68jU", title: "Bu nima? Iya iya yo", calm: true },

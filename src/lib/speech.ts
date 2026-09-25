@@ -76,6 +76,29 @@ export function preloadSounds(items: readonly BoardItem[]) {
   for (const item of items) if (item.sound) void loadSound(item.sound);
 }
 
+export type Phrase = "bismillah" | "alhamdulillah";
+
+export function preloadPhrases() {
+  void loadSound("bismillah");
+  void loadSound("alhamdulillah");
+}
+
+/** Plays a spoken phrase from `public/sounds`; resolves with its length in seconds (0 if it couldn't play). */
+export async function playPhrase(name: Phrase): Promise<number> {
+  const buffer = await loadSound(name);
+  const audio = getAudio();
+  if (!buffer || !audio) return 0;
+  try {
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audio.destination);
+    source.start();
+    return buffer.duration;
+  } catch {
+    return 0;
+  }
+}
+
 let playing: AudioBufferSourceNode | null = null;
 let nameTimer: number | undefined;
 

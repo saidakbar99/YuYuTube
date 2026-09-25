@@ -1,8 +1,8 @@
-const VERSION = "yuyutube-v5";
+const VERSION = "yuyutube-v6";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
-// The tap-and-hear recordings (~250KB in all), so the break works offline too.
-const SOUNDS = ["bee", "bird", "bus", "car", "cat", "chicken", "cow", "duck", "elephant", "frog", "horse", "lion", "plane", "sheep"].map(
+// The tap-and-hear recordings and spoken phrases (~270KB in all), so they work offline too.
+const SOUNDS = ["bee", "bird", "bus", "car", "cat", "chicken", "cow", "duck", "elephant", "frog", "horse", "lion", "plane", "sheep", "bismillah", "alhamdulillah"].map(
   (name) => `/sounds/${name}.mp3`,
 );
 

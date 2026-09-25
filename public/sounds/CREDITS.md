@@ -1,6 +1,7 @@
 # Sound credits
 
-All recordings come from Wikimedia Commons. Each was trimmed to its loudest ~2.5 seconds,
+All recordings come from Wikimedia Commons. The animal and vehicle sounds were trimmed to their
+loudest ~2.5 seconds; the two spoken phrases only had the silence around them removed. All were
 mixed to mono, volume-normalised, faded at the edges and re-encoded as 64 kbps MP3.
 
 | file | source | author | license |
@@ -18,6 +19,8 @@ mixed to mono, volume-normalised, faded at the edges and re-encoded as 64 kbps M
 | `frog.mp3` | [Single Frog Croak.oga](https://commons.wikimedia.org/wiki/File:Single_Frog_Croak.oga) | MichaeltheFox8621 | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | `car.mp3` | [Car Horn.wav](https://commons.wikimedia.org/wiki/File:Car_Horn.wav) | 15HPanska_Ruttner_Jan | CC0 |
 | `bus.mp3` | [WWS CityBusMANSG220horn.ogg](https://commons.wikimedia.org/wiki/File:WWS_CityBusMANSG220horn.ogg) | Work With Sounds / Technical Museum of Slovenia | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `bismillah.mp3` | [LL-Q13955 (ara)-Rashed Aljahdali-بسم الله.wav](https://commons.wikimedia.org/wiki/File:LL-Q13955_(ara)-Rashed_Aljahdali-%D8%A8%D8%B3%D9%85_%D8%A7%D9%84%D9%84%D9%87.wav) (Lingua Libre) | Rashed Aljahdali | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `alhamdulillah.mp3` | [Ar-الحمد لله.ogg](https://commons.wikimedia.org/wiki/File:Ar-%D8%A7%D9%84%D8%AD%D9%85%D8%AF_%D9%84%D9%84%D9%87.ogg) | ArabicAudios | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | `plane.mp3` | [Jet airliner overhead.ogg](https://commons.wikimedia.org/wiki/File:Jet_airliner_overhead.ogg) | Jud McCranie | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 
 The trimmed files inherit their source's license (share-alike files stay under the same CC BY-SA version).

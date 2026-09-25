@@ -16,12 +16,19 @@ import { useBedtime } from "@/hooks/useBedtime";
 import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
+import { clipOf } from "@/lib/clip";
 import { recordPick, recordWatch } from "@/lib/favorites";
 import { playLaunchJingle } from "@/lib/jingle";
+import { playPhrase, preloadPhrases } from "@/lib/speech";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
 
 const WATCH_TICK_S = 5;
+// Pause between a spoken phrase and the video starting.
+const PHRASE_GAP_MS = 250;
+const PHRASE_WAIT_MS = 2500;
+
+const clipFor = (id: string) => clipOf(videos.find((v) => v.id === id));
 
 export function App() {
   const [view, setView] = useState<"home" | "watch">("home");
@@ -42,15 +49,28 @@ export function App() {
   const sinceBoardRef = useRef(0);
   const boardNextRef = useRef<string | null>(null);
   const enterFullscreenRef = useRef<() => void>(() => {});
+  const saidBismillahRef = useRef(false);
 
-  const goTo = useCallback((id: string) => {
+  /** `after`: something to finish first (a spoken phrase, resolving to its length in seconds). */
+  const goTo = useCallback((id: string, after?: Promise<number>) => {
     const next = buildFeed(libraryRef.current, id, pushRecent(id));
     sinceBoardRef.current += 1;
     feedRef.current = next;
     currentIdRef.current = id;
     setFeed(next);
     setCurrentId(id);
-    playRef.current(id);
+    if (!after) {
+      playRef.current(id);
+      return;
+    }
+    // Never hold the video hostage to a phrase that can't load (offline, not cached yet).
+    const giveUp = new Promise<number>((resolve) => window.setTimeout(() => resolve(0), PHRASE_WAIT_MS));
+    void Promise.race([after, giveUp]).then((seconds) => {
+      window.setTimeout(() => {
+        // He may have picked something else meanwhile.
+        if (currentIdRef.current === id) playRef.current(id);
+      }, seconds * 1000 + PHRASE_GAP_MS);
+    });
   }, []);
 
   // The feed can predate bedtime starting, so filter it by what is allowed now.
@@ -105,6 +125,7 @@ export function App() {
     onEnded: handleEnded,
     onFailed: handleFailed,
     preloadId: videos[0]?.id,
+    clipFor,
   });
 
   useEffect(() => {
@@ -144,7 +165,10 @@ export function App() {
   });
 
   useEffect(() => {
-    if (resting) pause();
+    if (!resting) return;
+    pause();
+    // Watching is over for now: close with "Alhamdulillah" (not when the app merely opens already resting).
+    if (saidBismillahRef.current) void playPhrase("alhamdulillah");
   }, [resting, pause]);
 
   // Bedtime began during a lively video that is still going after the grace period: move to a calm one.
@@ -180,7 +204,10 @@ export function App() {
       recordPick(id);
       failuresRef.current = 0;
       setExhausted(false);
-      goTo(id);
+      // The first video of each launch starts with "Bismillah".
+      const bismillah = saidBismillahRef.current ? undefined : playPhrase("bismillah");
+      saidBismillahRef.current = true;
+      goTo(id, bismillah);
       setView("watch");
       enterWatch();
     },
@@ -225,7 +252,10 @@ export function App() {
   const current = useMemo(() => videos.find((v) => v.id === currentId) ?? null, [currentId]);
 
   // "Yu-Yu!" as the app opens, right after Android's icon splash.
-  useEffect(() => playLaunchJingle(), []);
+  useEffect(() => {
+    playLaunchJingle();
+    preloadPhrases();
+  }, []);
 
   useEffect(() => {
     const block = (event: Event) => event.preventDefault();

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { config } from "@/config";
+import type { Clip } from "@/lib/clip";
 import { PLAYER_VARS, SKIPPABLE_ERRORS, loadYouTubeApi } from "@/lib/youtube";
 
 export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "ended" | "error" | "stalled";
@@ -16,6 +17,8 @@ type Handlers = {
   onFailed: (id: string | null) => void;
   /** Cued (not played) at startup so the very first tap has a warm player. */
   preloadId?: string;
+  /** Which part of a video to play: skips intros, stops before outros. */
+  clipFor: (id: string) => Clip;
 };
 
 function capVolume(player: YT.Player | null) {
@@ -26,7 +29,7 @@ function capVolume(player: YT.Player | null) {
   }
 }
 
-export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
+export function useYouTubePlayer({ onEnded, onFailed, preloadId, clipFor }: Handlers) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YT.Player | null>(null);
   const apiRef = useRef<typeof YT | null>(null);
@@ -35,15 +38,22 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
   const currentIdRef = useRef<string | null>(null);
   const endFiredRef = useRef(false);
   const stallRef = useRef({ time: -1, at: 0 });
+  const clipRef = useRef<Clip>({ start: 0, end: null });
 
   const [status, setStatus] = useState<PlayerStatus>("idle");
   const [progress, setProgress] = useState({ current: 0, duration: 0 });
 
-  const handlers = useRef({ onEnded, onFailed });
+  const handlers = useRef({ onEnded, onFailed, clipFor });
   const preloadRef = useRef(preloadId);
   useEffect(() => {
-    handlers.current = { onEnded, onFailed };
+    handlers.current = { onEnded, onFailed, clipFor };
   });
+
+  // Only the start goes to YouTube. The end is enforced by the poll below: at `endSeconds`
+  // YouTube may merely pause, which would leave the child on a paused poster instead of moving on.
+  const load = useCallback((player: YT.Player, id: string) => {
+    player.loadVideoById({ videoId: id, startSeconds: clipRef.current.start });
+  }, []);
 
   const fireEnd = useCallback(() => {
     if (endFiredRef.current) return;
@@ -59,13 +69,14 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
 
   const play = useCallback((id: string) => {
     currentIdRef.current = id;
+    clipRef.current = handlers.current.clipFor(id);
     endFiredRef.current = false;
     stallRef.current = { time: -1, at: Date.now() };
     setProgress({ current: 0, duration: 0 });
     setStatus("loading");
-    if (readyRef.current && playerRef.current) playerRef.current.loadVideoById(id);
+    if (readyRef.current && playerRef.current) load(playerRef.current, id);
     else pendingRef.current = id;
-  }, []);
+  }, [load]);
 
   const resume = useCallback(() => {
     playerRef.current?.playVideo();
@@ -105,7 +116,7 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
             capVolume(playerRef.current);
             const queued = pendingRef.current;
             pendingRef.current = null;
-            if (queued) playerRef.current?.loadVideoById(queued);
+            if (queued && playerRef.current) load(playerRef.current, queued);
           },
           onStateChange: (event) => {
             if (endFiredRef.current) return;
@@ -155,7 +166,7 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
       apiRef.current = null;
       if (container) container.replaceChildren();
     };
-  }, [fireEnd]);
+  }, [fireEnd, load]);
 
   // Backgrounding throttles the iframe and our poll, so state drifts. Stop on the
   // way out, and take the player's own word for it on the way back in.
@@ -198,9 +209,12 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId }: Handlers) {
       if (!player?.getDuration) return;
       const duration = player.getDuration();
       const current = player.getCurrentTime();
-      setProgress({ current, duration });
+      const { start, end } = clipRef.current;
+      const stopAt = end !== null && duration > 0 ? Math.min(end, duration) : duration;
+      // The parent's progress bar shows the clip, not the whole upload.
+      setProgress({ current: Math.max(0, current - start), duration: Math.max(0, stopAt - start) });
 
-      if (duration > 0 && duration - current <= END_LEAD_SECONDS) {
+      if (stopAt > 0 && stopAt - current <= END_LEAD_SECONDS) {
         fireEnd();
         return;
       }

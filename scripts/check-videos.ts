@@ -1,4 +1,5 @@
 import { videos } from "../src/data/videos";
+import { toSeconds } from "../src/lib/clip";
 import { maxResThumbnail } from "../src/lib/thumbnails";
 
 type Result = { id: string; title: string; ok: boolean; detail: string; maxres: boolean };
@@ -55,6 +56,20 @@ async function main() {
   console.log(`\n${results.length - bad.length}/${results.length} playable.`);
   if (lowRes.length) console.log(`${lowRes.length} fall back to the 480x360 thumbnail (cosmetic only).`);
   if (dupes.length) console.log(`Duplicate IDs: ${dupes.map((d) => d.id).join(", ")}`);
+
+  // Mistyped start/end times would be silently ignored by the app, so flag them here.
+  const badTimes = videos.filter((v) => {
+    const start = toSeconds(v.start);
+    const end = toSeconds(v.end);
+    return (
+      (v.start !== undefined && start === undefined) ||
+      (v.end !== undefined && end === undefined) ||
+      (end !== undefined && end <= (start ?? 0))
+    );
+  });
+  for (const v of badTimes) console.log(`Bad start/end on ${v.id} (${v.title}): start ${v.start ?? "-"}, end ${v.end ?? "-"}`);
+  if (badTimes.length) process.exitCode = 1;
+
   if (bad.length) {
     console.log(`Remove or replace: ${bad.map((b) => b.id).join(", ")}`);
     process.exitCode = 1;
