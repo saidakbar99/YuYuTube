@@ -18,7 +18,6 @@ import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
 import { clipOf } from "@/lib/clip";
 import { recordPick, recordWatch } from "@/lib/favorites";
-import { playLaunchJingle } from "@/lib/jingle";
 import { playPhrase, preloadPhrases } from "@/lib/speech";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
@@ -181,6 +180,12 @@ export function App() {
     if (next) goTo(next.id);
   }, [overstaying, view, status, nextAllowed, goTo]);
 
+  // The "no internet" screen covers everything, so the few seconds already downloaded
+  // mustn't keep playing underneath it.
+  useEffect(() => {
+    if (!online) pause();
+  }, [online, pause]);
+
   // Native fullscreen paints only the fullscreen element, so any full-screen overlay
   // would be invisible behind it. Drop out of fullscreen before showing one.
   const suspended = resting || !online;
@@ -188,6 +193,8 @@ export function App() {
   const showHome = useCallback(() => {
     pause();
     setBoardNext(null);
+    // A fresh start from the home screen: the next break comes after a full run of videos.
+    sinceBoardRef.current = 0;
     reshuffleHome();
     setView("home");
   }, [pause]);
@@ -251,11 +258,8 @@ export function App() {
 
   const current = useMemo(() => videos.find((v) => v.id === currentId) ?? null, [currentId]);
 
-  // "Yu-Yu!" as the app opens, right after Android's icon splash.
-  useEffect(() => {
-    playLaunchJingle();
-    preloadPhrases();
-  }, []);
+  // Ready before the first tap, so "Bismillah" doesn't wait on a download.
+  useEffect(() => preloadPhrases(), []);
 
   useEffect(() => {
     const block = (event: Event) => event.preventDefault();

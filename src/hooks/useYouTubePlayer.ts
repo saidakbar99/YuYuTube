@@ -122,6 +122,13 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId, clipFor }: Hand
             if (endFiredRef.current) return;
             switch (event.data) {
               case api.PlayerState.PLAYING:
+                // Nothing plays while the app is out of sight: a video that was still loading, or
+                // that started on a timer (after the break, after "Bismillah"), is stopped here.
+                if (document.hidden) {
+                  playerRef.current?.pauseVideo();
+                  setStatus("paused");
+                  break;
+                }
                 // Re-applied per video: a fresh load can come back at full volume.
                 capVolume(playerRef.current);
                 setStatus("playing");

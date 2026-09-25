@@ -10,25 +10,31 @@ export function RestScreen({ emoji, onUnlock }: { emoji: string; onUnlock: () =>
   const [held, setHeld] = useState(0);
   const timer = useRef<number | null>(null);
 
-  const stop = () => {
+  const clear = () => {
     if (timer.current !== null) window.clearInterval(timer.current);
     timer.current = null;
+  };
+
+  const stop = () => {
+    clear();
     setHeld(0);
   };
 
-  useEffect(() => stop, []);
+  useEffect(() => clear, []);
 
+  // Progress is read off the clock, and the unlock happens here in the timer, never inside a
+  // state update (React may run those twice, and they must not change other components).
   const start = () => {
     if (timer.current !== null) return;
+    const startedAt = Date.now();
     timer.current = window.setInterval(() => {
-      setHeld((ms) => {
-        const next = ms + TICK_MS;
-        if (next >= HOLD_MS) {
-          stop();
-          onUnlock();
-        }
-        return next;
-      });
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= HOLD_MS) {
+        stop();
+        onUnlock();
+        return;
+      }
+      setHeld(elapsed);
     }, TICK_MS);
   };
 

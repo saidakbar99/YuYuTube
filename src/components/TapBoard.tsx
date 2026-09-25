@@ -22,11 +22,39 @@ export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inP
     done.current = onDone;
   });
 
+  // The countdown only runs while the app is on screen; in the background it waits.
+  const [hidden, setHidden] = useState(false);
+
   useEffect(() => {
     warmUpVoices();
     preloadSounds(items);
-    const timer = window.setTimeout(() => done.current(), config.boardSeconds * 1000);
-    return () => window.clearTimeout(timer);
+
+    let remaining = config.boardSeconds * 1000;
+    let startedAt = 0;
+    let timer: number | undefined;
+    const run = () => {
+      if (timer !== undefined) return;
+      startedAt = Date.now();
+      timer = window.setTimeout(() => done.current(), remaining);
+    };
+    const hold = () => {
+      if (timer === undefined) return;
+      window.clearTimeout(timer);
+      timer = undefined;
+      remaining -= Date.now() - startedAt;
+    };
+    const onVisibility = () => {
+      setHidden(document.hidden);
+      if (document.hidden) hold();
+      else run();
+    };
+
+    if (!document.hidden) run();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [items]);
 
   // The bounce answers the finger straight away...
@@ -52,7 +80,7 @@ export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inP
       }`}
     >
       <div className="mx-1 mb-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s` }} />
+        <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s`, animationPlayState: hidden ? "paused" : "running" }} />
       </div>
 
       <div
