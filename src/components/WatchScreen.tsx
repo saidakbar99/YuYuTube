@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Player } from "@/components/Player";
+import { TapBoard } from "@/components/TapBoard";
 import { VideoCard } from "@/components/VideoCard";
 import type { Video } from "@/data/videos";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -15,12 +16,16 @@ type Props = {
   status: PlayerStatus;
   progress: { current: number; duration: number };
   frameRef: RefObject<HTMLDivElement | null>;
+  /** Filled with this screen's "go fullscreen", so a tile tap anywhere can open the video fullscreen. */
+  enterFullscreenRef: RefObject<() => void>;
   suspended: boolean;
   onSelect: (id: string) => void;
   onTogglePlay: () => void;
   onNext: () => void;
   onReplay: () => void;
   onHome: () => void;
+  /** Set while the tap-and-hear break is due; called when it's over. */
+  onBoardDone: (() => void) | null;
 };
 
 export function WatchScreen({
@@ -29,17 +34,23 @@ export function WatchScreen({
   status,
   progress,
   frameRef,
+  enterFullscreenRef,
   suspended,
   onSelect,
   onTogglePlay,
   onNext,
   onReplay,
   onHome,
+  onBoardDone,
 }: Props) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
   const fullscreen = useFullscreen(stageRef);
-  const { exit } = fullscreen;
+  const { enter, exit } = fullscreen;
+
+  useEffect(() => {
+    enterFullscreenRef.current = () => void enter();
+  }, [enter, enterFullscreenRef]);
 
   useEffect(() => {
     if (suspended) exit();
@@ -85,6 +96,8 @@ export function WatchScreen({
           onNext={onNext}
           onReplay={onReplay}
           onHome={leave}
+          // Android's fullscreen shows only the player, so there the break goes inside it.
+          onBoardDone={fullscreen.active ? onBoardDone : null}
         />
       </div>
 
@@ -102,6 +115,8 @@ export function WatchScreen({
       )}
 
       {!fullscreen.active && <BottomNav active={false} onHome={leave} />}
+
+      {!fullscreen.active && onBoardDone && <TapBoard onDone={onBoardDone} />}
     </div>
   );
 }

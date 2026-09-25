@@ -2,22 +2,26 @@ import type { BoardItem } from "@/data/board";
 import { getAudio } from "@/lib/audio";
 
 const isLang = (voice: SpeechSynthesisVoice, code: string) => voice.lang.toLowerCase().startsWith(code);
+// Pause between the recording ending and the name being said.
+const NAME_GAP_MS = 150;
+
+const synth = () => (typeof window !== "undefined" ? window.speechSynthesis : undefined);
 
 /** Voices load late on Chrome; asking early at least starts that. */
 export function warmUpVoices() {
   try {
-    window.speechSynthesis?.getVoices();
+    synth()?.getVoices();
   } catch {
     // no speech on this device
   }
 }
 
-/** Says the tile's word: an Uzbek voice if the phone has one, else the Turkish voice with Turkish spelling. */
-export function sayItem(item: BoardItem) {
-  const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
-  if (!synth) return;
+/** Says the tile's name: an Uzbek voice if the phone has one, else the Turkish voice with Turkish spelling. */
+function sayName(item: BoardItem) {
+  const speech = synth();
+  if (!speech) return;
   try {
-    const voices = synth.getVoices();
+    const voices = speech.getVoices();
     const uzbek = voices.find((v) => isLang(v, "uz"));
     const turkish = voices.find((v) => isLang(v, "tr"));
     const utterance = new SpeechSynthesisUtterance(uzbek ? item.uz : item.tr);
@@ -27,15 +31,93 @@ export function sayItem(item: BoardItem) {
     if (voice) utterance.voice = voice;
     utterance.rate = 0.85;
     utterance.pitch = 1.15;
-    // A new tap cuts off the previous word, so every tap answers straight away.
-    synth.cancel();
-    synth.speak(utterance);
+    speech.speak(utterance);
   } catch {
-    // speech unavailable — the tile still bounces and pops
+    // speech unavailable — the recording or chime already played
   }
 }
 
-/** A short rising "pop", so a tap always makes a sound even where speech is missing. */
+// iOS only lets speech start from inside a tap the first time; an empty utterance there unlocks it
+// for the name said a moment later, after the recording.
+let speechPrimed = false;
+function primeSpeech() {
+  if (speechPrimed) return;
+  speechPrimed = true;
+  try {
+    synth()?.speak(new SpeechSynthesisUtterance(""));
+  } catch {
+    // no speech
+  }
+}
+
+const buffers = new Map<string, Promise<AudioBuffer | null>>();
+
+function loadSound(name: string): Promise<AudioBuffer | null> {
+  let pending = buffers.get(name);
+  if (!pending) {
+    pending = (async () => {
+      const audio = getAudio();
+      if (!audio) return null;
+      try {
+        const response = await fetch(`/sounds/${name}.mp3`);
+        return await audio.decodeAudioData(await response.arrayBuffer());
+      } catch {
+        buffers.delete(name); // try again next time, e.g. once back online
+        return null;
+      }
+    })();
+    buffers.set(name, pending);
+  }
+  return pending;
+}
+
+/** Fetches and decodes the board's recordings ahead of the first tap. */
+export function preloadSounds(items: readonly BoardItem[]) {
+  for (const item of items) if (item.sound) void loadSound(item.sound);
+}
+
+let playing: AudioBufferSourceNode | null = null;
+let nameTimer: number | undefined;
+
+/** Everything a tap should say: the real sound (or a chime), then the name. A new tap cuts the last one off. */
+export function playTile(item: BoardItem) {
+  primeSpeech();
+  window.clearTimeout(nameTimer);
+  try {
+    playing?.stop();
+  } catch {
+    // already finished
+  }
+  playing = null;
+  try {
+    synth()?.cancel();
+  } catch {
+    // no speech
+  }
+
+  if (!item.sound) {
+    pop();
+    sayName(item);
+    return;
+  }
+
+  void loadSound(item.sound).then((buffer) => {
+    const audio = getAudio();
+    if (!buffer || !audio) {
+      pop();
+      sayName(item);
+      return;
+    }
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audio.destination);
+    source.start();
+    playing = source;
+    nameTimer = window.setTimeout(() => sayName(item), buffer.duration * 1000 + NAME_GAP_MS);
+  });
+}
+
+/** A short rising "pop" for tiles without a recording (and whenever one fails to load). */
 export function pop() {
   const audio = getAudio();
   if (!audio) return;

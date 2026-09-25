@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { config } from "@/config";
 import type { Video } from "@/data/videos";
 import type { PlayerStatus } from "@/hooks/useYouTubePlayer";
-import { useGestures, type LocalPoint } from "@/hooks/useGestures";
+import { useGestures } from "@/hooks/useGestures";
 import type { useFullscreen } from "@/hooks/useFullscreen";
 import { NightTint } from "@/components/NightTint";
+import { SparkleLayer, useSparkles } from "@/components/Sparkles";
+import { TapBoard } from "@/components/TapBoard";
 import { Thumbnail } from "@/components/Thumbnail";
 import {
   ChevronDownIcon,
@@ -19,10 +21,6 @@ import {
 } from "@/components/PlayerIcons";
 
 const HIDE_CONTROLS_MS = 3000;
-const MAX_SPARKLES = 8;
-const SPARKLE_EMOJI = ["⭐", "🌟", "💖", "🎈", "🫧", "🦋"];
-
-type Sparkle = LocalPoint & { id: number; emoji: string };
 
 function clock(seconds: number) {
   const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
@@ -45,6 +43,8 @@ type Props = {
   onNext: () => void;
   onReplay: () => void;
   onHome: () => void;
+  /** Set while the tap-and-hear break is due: shown inside the fullscreen player, so fullscreen stays on. */
+  onBoardDone: (() => void) | null;
 };
 
 export function Player({
@@ -59,9 +59,9 @@ export function Player({
   onNext,
   onReplay,
   onHome,
+  onBoardDone,
 }: Props) {
-  // Set only by a parent (long-press, or using a control). While a video plays the
-  // controls stay hidden otherwise, so a toddler never sees a pause button to hit.
+  // A tap shows the controls for a few seconds; while paused they stay up.
   const [woken, setWoken] = useState(false);
   const [shownFor, setShownFor] = useState(video?.id);
 
@@ -72,8 +72,8 @@ export function Player({
 
   const controlsShown = woken || status !== "playing";
 
-  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
-  const sparkleId = useRef(0);
+  // The app-wide sparkles can't reach a fullscreen player, so it keeps its own.
+  const sparkles = useSparkles();
 
   const wake = () => setWoken(true);
   // Hidden buttons must not catch a stray tap.
@@ -84,16 +84,10 @@ export function Player({
     action();
   };
   const gestures = useGestures({
-    // While playing, a tap is just for fun — only a parent's long-press can change playback.
     onTap: (point) => {
-      if (status !== "playing") {
-        onTogglePlay();
-        return;
-      }
-      sparkleId.current += 1;
-      const emoji = SPARKLE_EMOJI[Math.floor(Math.random() * SPARKLE_EMOJI.length)];
-      const sparkle = { ...point, id: sparkleId.current, emoji };
-      setSparkles((list) => [...list.slice(-(MAX_SPARKLES - 1)), sparkle]);
+      wake();
+      onTogglePlay();
+      if (fullscreen.active) sparkles.spawn(point.x, point.y);
       // A tiny buzz with it. Android only: iOS has no vibration API for web pages.
       try {
         navigator.vibrate?.(15);
@@ -101,7 +95,6 @@ export function Player({
         // not allowed here
       }
     },
-    onLongPress: wake,
     onSwipeUp: () => {
       if (!fullscreen.active) fullscreen.enter();
     },
@@ -148,18 +141,7 @@ export function Player({
 
       <div {...gestures} className="absolute inset-0 z-20 touch-none" />
 
-      <div aria-hidden className="pointer-events-none absolute inset-0 z-25 overflow-hidden">
-        {sparkles.map((s) => (
-          <span
-            key={s.id}
-            className="sparkle absolute text-5xl"
-            style={{ left: s.x, top: s.y }}
-            onAnimationEnd={() => setSparkles((list) => list.filter((item) => item.id !== s.id))}
-          >
-            {s.emoji}
-          </span>
-        ))}
-      </div>
+      <SparkleLayer {...sparkles} className="absolute inset-0 z-25" />
 
       {!showEndCard && !showStallCard && (
         <div
@@ -189,8 +171,7 @@ export function Player({
             ) : (
               <button
                 type="button"
-                // Resuming is for anyone; only a parent pausing should keep the controls up.
-                onClick={status === "playing" ? withWake(onTogglePlay) : onTogglePlay}
+                onClick={withWake(onTogglePlay)}
                 aria-label={status === "playing" ? "Pauza" : "Ijro etish"}
                 className={`${interactive} flex size-22 items-center justify-center rounded-full bg-black/40 text-white transition-transform duration-100 active:scale-90 sm:size-26`}
               >
@@ -241,6 +222,8 @@ export function Player({
 
       {/* Native fullscreen paints only this element, so the page-wide warm tint needs a copy in here. */}
       {fullscreen.active && !fullscreen.pseudo && <NightTint className="absolute inset-0 z-45" />}
+
+      {onBoardDone && <TapBoard inPlayer onDone={onBoardDone} />}
 
       {showStallCard && (
         <div className="absolute inset-0 z-40 flex items-center justify-center gap-6 bg-black/85 px-6">

@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { config } from "@/config";
 import { boardItems } from "@/data/board";
 import { shuffle } from "@/lib/shuffle";
-import { pop, sayItem, warmUpVoices } from "@/lib/speech";
+import { playTile, preloadSounds, warmUpVoices } from "@/lib/speech";
 
 const TILES = 6;
 
 /**
- * A short break between videos: big pictures that pop, bounce and say their name in Uzbek.
+ * A short break between videos: big pictures that bounce, make their real sound and say their name in Uzbek.
  * Nothing to finish or get wrong; after `config.boardSeconds` the next video comes on by itself.
  */
-export function TapBoard({ onDone }: { onDone: () => void }) {
+export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inPlayer?: boolean }) {
   const [items] = useState(() => shuffle(boardItems).slice(0, TILES));
   // Bumping a tile's count remounts its emoji, which restarts the bounce animation.
   const [taps, setTaps] = useState<number[]>(() => items.map(() => 0));
@@ -24,34 +24,49 @@ export function TapBoard({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     warmUpVoices();
+    preloadSounds(items);
     const timer = window.setTimeout(() => done.current(), config.boardSeconds * 1000);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [items]);
 
-  const tap = (index: number) => {
-    pop();
-    sayItem(items[index]);
+  // The bounce answers the finger straight away...
+  const bounce = (index: number) => {
+    setTaps((list) => list.map((n, i) => (i === index ? n + 1 : n)));
+  };
+
+  // ...but sound waits for the release: on touch screens only that counts as a tap that may play audio.
+  const speak = (index: number) => {
+    playTile(items[index]);
     try {
       navigator.vibrate?.(15);
     } catch {
       // not allowed here
     }
-    setTaps((list) => list.map((n, i) => (i === index ? n + 1 : n)));
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-yt-bg px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    // Inside a fullscreen player it fills the (always landscape) video area; otherwise the whole screen.
+    <div
+      className={`flex flex-col bg-yt-bg px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+        inPlayer ? "absolute inset-0 z-40" : "fixed inset-0 z-50"
+      }`}
+    >
       <div className="mx-1 mb-3 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s` }} />
       </div>
 
-      <div className="grid flex-1 grid-cols-2 grid-rows-3 gap-3 landscape:grid-cols-3 landscape:grid-rows-2">
+      <div
+        className={`grid flex-1 gap-3 ${
+          inPlayer ? "grid-cols-3 grid-rows-2" : "grid-cols-2 grid-rows-3 landscape:grid-cols-3 landscape:grid-rows-2"
+        }`}
+      >
         {items.map((item, i) => (
           <button
             key={item.emoji}
             type="button"
             aria-label={item.uz}
-            onPointerDown={() => tap(i)}
+            onPointerDown={() => bounce(i)}
+            onClick={() => speak(i)}
             className="flex items-center justify-center rounded-3xl transition-transform duration-100 active:scale-95"
             style={{ backgroundColor: item.bg }}
           >

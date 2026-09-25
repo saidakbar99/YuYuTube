@@ -31,9 +31,9 @@ Exits non-zero and names the offending IDs if any are removed, private, or embed
 | `graceMinutes` | `10` | how long a video may keep going after time is up or bedtime starts, before it is stopped anyway (long compilations) |
 | `bedtime` | `20:00`–`07:00` | `null` is off. During it only videos marked `calm: true` in `videos.ts` are shown; if none are marked, a 🌙 screen follows the current video. The corner hold unlocks the full library for the rest of that night |
 | `eveningFrom` | `18:00` | `null` is off. From then the whole screen, videos included, takes a warm tint (less blue light), fading in over a minute; stronger during `bedtime` |
-| `boardEvery` | `3` | `null` is off. After this many videos, a tap-and-hear break comes before the next one: big pictures (animals, fruit, vehicles, sky) that pop, bounce and say their name in Uzbek. Words and pictures live in `src/data/board.ts` |
+| `boardEvery` | `3` | `null` is off. After this many videos, a tap-and-hear break comes before the next one: big pictures that bounce, play a real recording (animals and vehicles, `public/sounds/`, credits in `public/sounds/CREDITS.md`) or a chime, then say their name in Uzbek with the phone's voice if it has one. In fullscreen the break shows inside the player, so fullscreen stays on. Tiles live in `src/data/board.ts` |
 | `boardSeconds` | `30` | how long the break lasts; then the next video plays by itself. The break does not count as screen time |
-| `favoritesOnTop` | `4` | how many of his most-picked videos lead the home screen. Picks fade as new ones come in, so it follows current favorites |
+| `favoritesOnTop` | `4` | how many favorites lead the home screen. A video earns points when he picks it himself (1 point) and for time actually watched (0.3 per minute, up to 10 minutes per sitting, autoplayed videos included). Points halve every week, so it follows what he likes now; about 3 points makes a favorite |
 
 Mark a bedtime video with `calm: true`:
 
@@ -61,7 +61,7 @@ Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env
 ## Notes
 
 - Player host is `youtube-nocookie.com`, controls off, and a transparent overlay covers the iframe at all times so no tap reaches YouTube's UI.
-- Built for a toddler: while a video plays, a tap only pops a sparkle emoji and never pauses or skips. Swipe up/down still toggles fullscreen. Parent controls (pause, next, fullscreen, back) appear on a 1.5s press-and-hold and are untappable while hidden. When the video is not playing, a tap resumes it.
+- Built for a toddler: a tap on the video pauses or resumes it and shows the controls for 3s (hidden controls can't be tapped). Every touch anywhere in the app pops a sparkle emoji; taps on the video also buzz (Android). Swipe up/down toggles fullscreen; swiping sideways does nothing.
 - The UI is picture-only: no titles on cards, and icon buttons instead of text on the stall, end and error screens. Titles in `videos.ts` are still used as accessibility labels.
 - Pause and the last ~0.5s of playback are covered by an opaque layer, so suggestions and the end screen are never on screen.
 - `rel: 0` no longer removes related videos (YouTube changed this in 2018) — the overlay and the pause/end covers are what actually keep them out of reach.

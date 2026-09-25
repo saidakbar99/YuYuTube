@@ -7,7 +7,7 @@ import { OfflineNotice } from "@/components/OfflineNotice";
 import { NightTint } from "@/components/NightTint";
 import { HomeIcon } from "@/components/PlayerIcons";
 import { RestScreen } from "@/components/RestScreen";
-import { TapBoard } from "@/components/TapBoard";
+import { TouchSparkles } from "@/components/Sparkles";
 import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
 import { videos, type Video } from "@/data/videos";
@@ -16,10 +16,12 @@ import { useBedtime } from "@/hooks/useBedtime";
 import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
-import { recordPick } from "@/lib/favorites";
+import { recordPick, recordWatch } from "@/lib/favorites";
 import { playLaunchJingle } from "@/lib/jingle";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
+
+const WATCH_TICK_S = 5;
 
 export function App() {
   const [view, setView] = useState<"home" | "watch">("home");
@@ -39,6 +41,7 @@ export function App() {
   const blockedRef = useRef(false);
   const sinceBoardRef = useRef(0);
   const boardNextRef = useRef<string | null>(null);
+  const enterFullscreenRef = useRef<() => void>(() => {});
 
   const goTo = useCallback((id: string) => {
     const next = buildFeed(libraryRef.current, id, pushRecent(id));
@@ -113,6 +116,14 @@ export function App() {
   }, [status]);
 
   const screenTime = useScreenTime(view === "watch" && status === "playing");
+
+  // Watching time feeds the favorites too, not just taps.
+  const watchingId = view === "watch" && status === "playing" ? currentId : null;
+  useEffect(() => {
+    if (!watchingId) return;
+    const timer = window.setInterval(() => recordWatch(watchingId, WATCH_TICK_S), WATCH_TICK_S * 1000);
+    return () => window.clearInterval(timer);
+  }, [watchingId]);
   const bedtime = useBedtime();
   const online = useOnline();
 
@@ -148,7 +159,7 @@ export function App() {
 
   // Native fullscreen paints only the fullscreen element, so any full-screen overlay
   // would be invisible behind it. Drop out of fullscreen before showing one.
-  const suspended = resting || !online || boardNext !== null;
+  const suspended = resting || !online;
 
   const showHome = useCallback(() => {
     pause();
@@ -161,8 +172,11 @@ export function App() {
   const back = useBackGuard(showHome);
   const { enterWatch, leaveWatch } = back;
 
+  // Picking a video opens it fullscreen. Browsers allow that only inside the tap itself,
+  // so it has to happen here, before anything else.
   const open = useCallback(
     (id: string) => {
+      enterFullscreenRef.current();
       recordPick(id);
       failuresRef.current = 0;
       setExhausted(false);
@@ -185,6 +199,7 @@ export function App() {
         pause();
         return;
       }
+      enterFullscreenRef.current();
       recordPick(id);
       goTo(id);
     },
@@ -232,6 +247,8 @@ export function App() {
         status={status}
         progress={progress}
         frameRef={containerRef}
+        enterFullscreenRef={enterFullscreenRef}
+        onBoardDone={boardNext !== null && view === "watch" ? finishBoard : null}
         onSelect={choose}
         onTogglePlay={togglePlay}
         onNext={playNext}
@@ -255,8 +272,6 @@ export function App() {
         </div>
       )}
 
-      {boardNext !== null && view === "watch" && <TapBoard onDone={finishBoard} />}
-
       {view === "home" && (
         <div className="fixed inset-0 z-50">
           <HomeScreen onSelect={open} calmOnly={bedtime.active} />
@@ -267,6 +282,7 @@ export function App() {
       {!online && <OfflineNotice />}
       {back.confirming && <BackExitNotice />}
       <NightTint />
+      <TouchSparkles />
     </main>
   );
 }

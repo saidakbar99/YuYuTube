@@ -1,6 +1,10 @@
-const VERSION = "yuyutube-v4";
+const VERSION = "yuyutube-v5";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
+// The tap-and-hear recordings (~250KB in all), so the break works offline too.
+const SOUNDS = ["bee", "bird", "bus", "car", "cat", "chicken", "cow", "duck", "elephant", "frog", "horse", "lion", "plane", "sheep"].map(
+  (name) => `/sounds/${name}.mp3`,
+);
 
 const OFFLINE_HTML = `<!doctype html><html lang="uz"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -50,7 +54,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(SHELL)
-      .then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/icons/icon-192.png"]))
+      .then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/icons/icon-192.png", ...SOUNDS]))
       .catch(() => undefined)
       .then(() => self.skipWaiting()),
   );
@@ -86,7 +90,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/sounds/")) {
     event.respondWith(cacheFirst(request, SHELL));
     return;
   }
