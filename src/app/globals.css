@@ -37,12 +37,23 @@
   }
 }
 
+/* The frame is exactly the picture's 16:9 box. The iframe runs past it at the top and bottom: since it
+   is taller than 16:9, YouTube still fits the picture to its width, centred, and draws its title bar
+   and logo in the strips the frame clips off. Raise --yt-chrome if a title ever peeks in. */
+.player-frame {
+  --yt-chrome: 96px;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 /* The YouTube API swaps its target node for an iframe, so style it from the host. */
 .player-frame iframe {
   position: absolute;
-  inset: 0;
+  top: calc(-1 * var(--yt-chrome));
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% + 2 * var(--yt-chrome));
   border: 0;
   pointer-events: none;
 }
@@ -53,6 +64,21 @@
   width: 100%;
   height: 100%;
   background: #000;
+}
+
+/* Fullscreen: the picture's box is fitted inside the screen, bars wherever the shapes differ. */
+.player-stage:fullscreen,
+.player-stage.is-fullscreen {
+  container-type: size;
+}
+
+.player-stage.is-fullscreen .player-frame {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: min(100cqw, 100cqh * 16 / 9);
+  height: min(100cqh, 100cqw * 9 / 16);
+  translate: -50% -50%;
 }
 
 .player-stage.is-pseudo-fullscreen {
@@ -90,7 +116,7 @@
     aspect-ratio: 4 / 3;
   }
 
-  .player-stage:not(.is-fullscreen) .player-frame iframe {
+  .player-stage:not(.is-fullscreen) .player-frame {
     left: -16.667%;
     right: auto;
     width: 133.334%;

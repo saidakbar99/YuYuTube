@@ -6,6 +6,7 @@ import { Player } from "@/components/Player";
 import { TapBoard } from "@/components/TapBoard";
 import { VideoCard } from "@/components/VideoCard";
 import type { Video } from "@/data/videos";
+import type { useBackGuard } from "@/hooks/useBackGuard";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import type { PlayerStatus } from "@/hooks/useYouTubePlayer";
 import { maxResThumbnail } from "@/lib/thumbnails";
@@ -18,6 +19,7 @@ type Props = {
   frameRef: RefObject<HTMLDivElement | null>;
   /** Filled with this screen's "go fullscreen", so a tile tap anywhere can open the video fullscreen. */
   enterFullscreenRef: RefObject<() => void>;
+  backGuard: Pick<ReturnType<typeof useBackGuard>, "open" | "close">;
   suspended: boolean;
   onSelect: (id: string) => void;
   onTogglePlay: () => void;
@@ -35,6 +37,7 @@ export function WatchScreen({
   progress,
   frameRef,
   enterFullscreenRef,
+  backGuard,
   suspended,
   onSelect,
   onTogglePlay,
@@ -55,6 +58,19 @@ export function WatchScreen({
   useEffect(() => {
     if (suspended) exit();
   }, [suspended, exit]);
+
+  // Back (the button or Android's edge swipe) leaves fullscreen first, like YouTube, rather than
+  // the video or the whole app.
+  const exitRef = useRef(exit);
+  useEffect(() => {
+    exitRef.current = exit;
+  });
+  const { open: openLayer, close: closeLayer } = backGuard;
+  useEffect(() => {
+    if (!fullscreen.active) return;
+    openLayer("fullscreen", () => void exitRef.current());
+    return () => closeLayer("fullscreen");
+  }, [fullscreen.active, openLayer, closeLayer]);
 
   // Autoplay rolls into feed[0]; having its poster already decoded avoids a
   // black frame at the hand-off.

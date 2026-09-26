@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { config } from "@/config";
 import type { Video } from "@/data/videos";
 import type { PlayerStatus } from "@/hooks/useYouTubePlayer";
@@ -21,6 +21,11 @@ import {
 } from "@/components/PlayerIcons";
 
 const HIDE_CONTROLS_MS = 3000;
+// Dragging down in fullscreen: the picture follows the finger at this fraction and shrinks a little,
+// like YouTube, so he can see that pulling it down is how to get out.
+const PULL_FOLLOW = 0.5;
+const PULL_SHRINK_PER_PX = 0.0006;
+const PULL_MAX_PX = 300;
 
 function clock(seconds: number) {
   const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
@@ -75,6 +80,17 @@ export function Player({
   // The app-wide sparkles can't reach a fullscreen player, so it keeps its own.
   const sparkles = useSparkles();
 
+  const pullRef = useRef<HTMLDivElement | null>(null);
+  const pull = (dy: number) => {
+    const el = pullRef.current;
+    if (!el) return;
+    const distance = fullscreen.active ? Math.min(Math.max(0, dy), PULL_MAX_PX) : 0;
+    // Springs back on release; the fullscreen exit (if it was far enough) takes over from there.
+    el.style.transition = distance === 0 ? "transform 200ms ease-out" : "none";
+    el.style.transform =
+      distance === 0 ? "" : `translateY(${distance * PULL_FOLLOW}px) scale(${1 - distance * PULL_SHRINK_PER_PX})`;
+  };
+
   const wake = () => setWoken(true);
   // Hidden buttons must not catch a stray tap.
   const interactive = controlsShown ? "pointer-events-auto" : "pointer-events-none";
@@ -101,6 +117,7 @@ export function Player({
     onSwipeDown: () => {
       if (fullscreen.active) fullscreen.exit();
     },
+    onDrag: (_dx, dy) => pull(dy),
   }, fullscreen.rotated);
 
   useEffect(() => {
@@ -127,17 +144,19 @@ export function Player({
         .filter(Boolean)
         .join(" ")}
     >
-      <div ref={frameRef} className="player-frame absolute inset-0" />
+      <div ref={pullRef} className="absolute inset-0">
+        <div ref={frameRef} className="player-frame" />
 
-      {/* Opaque poster: keeps YouTube's suggestions and end screen out of sight. */}
-      {covered && (
-        <div className="pointer-events-none absolute inset-0 z-10 bg-black">
-          {video && (
-            <Thumbnail key={video.id} id={video.id} priority className="h-full w-full object-cover" />
-          )}
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
-      )}
+        {/* Opaque poster: keeps YouTube's suggestions and end screen out of sight. */}
+        {covered && (
+          <div className="pointer-events-none absolute inset-0 z-10 bg-black">
+            {video && (
+              <Thumbnail key={video.id} id={video.id} priority className="h-full w-full object-cover" />
+            )}
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
+        )}
+      </div>
 
       <div {...gestures} className="absolute inset-0 z-20 touch-none" />
 

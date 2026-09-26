@@ -9,6 +9,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Shaxsiy, tanlab olingan videolar.",
     start_url: "/",
     scope: "/",
+    // Android runs the installed app with no status or navigation bars, so the player's fullscreen
+    // is the app's own layer, with no system toast and a back press it can catch. iOS ignores it.
+    display_override: ["fullscreen"],
     display: "standalone",
     orientation: "any",
     background_color: "#0f0f0f",

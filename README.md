@@ -67,7 +67,9 @@ Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env
 ## Notes
 
 - Player host is `youtube-nocookie.com`, controls off, and a transparent overlay covers the iframe at all times so no tap reaches YouTube's UI.
-- Built for a toddler: a tap on the video pauses or resumes it and shows the controls for 3s (hidden controls can't be tapped). Every touch anywhere in the app pops a sparkle emoji; taps on the video also buzz (Android). Swipe up/down toggles fullscreen; swiping sideways does nothing.
+- Built for a toddler: a tap on the video pauses or resumes it and shows the controls for 3s (hidden controls can't be tapped). Every touch anywhere in the app pops a sparkle emoji; taps on the video also buzz (Android). Swipe up/down toggles fullscreen (a short flick is enough, and the picture follows the finger down, like YouTube); swiping sideways does nothing. The back button leaves fullscreen first, then the video, then asks before leaving the app.
+- Installed on Android, the app runs fullscreen itself (`display_override: ["fullscreen"]`), so the player's fullscreen is just the app's own layer: no "swipe to exit full screen" toast from Chrome. An app installed before this change may need reinstalling to pick it up. To stop the home gesture leaving the app entirely, use Android's app pinning (Settings → Security → App pinning).
+- YouTube's title bar and logo are cropped off: the iframe is taller than the picture and the extra (`--yt-chrome` in `globals.css`) is clipped.
 - The first video after opening the app is preceded by a spoken "Bismillah", and the 👋/🌙 rest screen by "Alhamdulillah" (recordings in `public/sounds/`, credits in `CREDITS.md` there).
 - The UI is picture-only: no titles on cards, and icon buttons instead of text on the stall, end and error screens. Titles in `videos.ts` are still used as accessibility labels.
 - Pause and the last ~0.5s of playback are covered by an opaque layer, so suggestions and the end screen are never on screen.

@@ -199,9 +199,12 @@ export function App() {
     setView("home");
   }, [pause]);
 
-  // Back on the watch screen returns home; back on home asks for a second press before leaving.
-  const back = useBackGuard(showHome);
-  const { enterWatch, leaveWatch } = back;
+  // Back on the watch screen returns home (after leaving fullscreen); back on home asks for a
+  // second press before leaving.
+  const back = useBackGuard();
+  const { open: openLayer, close: closeLayer } = back;
+  const enterWatch = useCallback(() => openLayer("watch", showHome), [openLayer, showHome]);
+  const leaveWatch = useCallback(() => closeLayer("watch"), [closeLayer]);
 
   // Picking a video opens it fullscreen. Browsers allow that only inside the tap itself,
   // so it has to happen here, before anything else.
@@ -282,6 +285,7 @@ export function App() {
         progress={progress}
         frameRef={containerRef}
         enterFullscreenRef={enterFullscreenRef}
+        backGuard={back}
         onBoardDone={boardNext !== null && view === "watch" ? finishBoard : null}
         onSelect={choose}
         onTogglePlay={togglePlay}

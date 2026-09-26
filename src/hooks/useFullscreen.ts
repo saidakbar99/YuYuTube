@@ -24,10 +24,19 @@ function fullscreenElement(): Element | null {
   return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
 }
 
-function lockLandscape() {
-  (screen.orientation as LockableOrientation | undefined)?.lock?.("landscape").catch(() => {
-    // desktop and iOS refuse; the CSS rotation covers iPhone
-  });
+/** Settles once the attempt is over. Desktop and iOS refuse; the CSS rotation covers iPhone. */
+function lockLandscape(): Promise<void> | null {
+  const orientation = screen.orientation as LockableOrientation | undefined;
+  if (!orientation?.lock) return null;
+  return orientation.lock("landscape").catch(() => {});
+}
+
+// Installed with display "fullscreen" (see manifest.ts), the app already has the whole screen with
+// no bars. Our own layer is enough there, and skipping the Fullscreen API skips Chrome's
+// "swipe down to exit full screen" toast along with it. Chrome still lets installed apps lock
+// orientation without the API.
+function appIsFullscreen() {
+  return window.matchMedia("(display-mode: fullscreen)").matches;
 }
 
 function unlockOrientation() {
@@ -47,6 +56,8 @@ function subscribePortrait(onChange: () => void) {
 export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
   const [native, setNative] = useState(false);
   const [pseudo, setPseudo] = useState(false);
+  // While the landscape lock is being tried, the CSS layer waits rather than turning sideways too.
+  const [locking, setLocking] = useState(false);
   // Where the stage was on screen just before the CSS fullscreen layer was toggled.
   const departureRef = useRef<Pose | null>(null);
   const portrait = useSyncExternalStore(
@@ -72,10 +83,10 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
   const enter = useCallback(async () => {
     const el = targetRef.current as WebkitElement | null;
     const request = el?.requestFullscreen ?? el?.webkitRequestFullscreen;
-    if (el && request) {
+    if (el && request && !appIsFullscreen()) {
       try {
         await request.call(el);
-        lockLandscape();
+        void lockLandscape();
         return;
       } catch {
         // iOS Safari and locked-down embeds reject — fall through to the CSS layer
@@ -83,6 +94,11 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
     }
     if (el) departureRef.current = capturePose(el);
     setPseudo(true);
+    const lock = lockLandscape();
+    if (lock) {
+      setLocking(true);
+      void lock.then(() => setLocking(false));
+    }
   }, [targetRef]);
 
   const exit = useCallback(async () => {
@@ -110,7 +126,7 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
   const active = native || pseudo;
   // iPhone can neither lock orientation nor go truly fullscreen, so while the phone is held
   // upright the CSS layer is turned sideways to fill the long edge instead.
-  const rotated = pseudo && portrait;
+  const rotated = pseudo && portrait && !locking;
   const toggle = useCallback(() => (active ? exit() : enter()), [active, enter, exit]);
 
   return { active, pseudo, rotated, enter, exit, toggle };
