@@ -16,13 +16,12 @@ import {
   ExpandIcon,
   HomeIcon,
   NextIcon,
-  PauseIcon,
   PlayIcon,
 } from "@/components/PlayerIcons";
 
 const HIDE_CONTROLS_MS = 3000;
-// Dragging down in fullscreen: the picture follows the finger at this fraction and shrinks a little,
-// like YouTube, so he can see that pulling it down is how to get out.
+// Dragging in fullscreen (any direction): the picture follows the finger at this fraction and shrinks
+// a little, like YouTube, so he can see that pulling it away is how to get out.
 const PULL_FOLLOW = 0.5;
 const PULL_SHRINK_PER_PX = 0.0006;
 const PULL_MAX_PX = 300;
@@ -44,7 +43,7 @@ type Props = {
   stageRef: RefObject<HTMLDivElement | null>;
   fullscreen: ReturnType<typeof useFullscreen>;
   hasNext: boolean;
-  onTogglePlay: () => void;
+  onPlay: () => void;
   onNext: () => void;
   onReplay: () => void;
   onHome: () => void;
@@ -60,13 +59,13 @@ export function Player({
   stageRef,
   fullscreen,
   hasNext,
-  onTogglePlay,
+  onPlay,
   onNext,
   onReplay,
   onHome,
   onBoardDone,
 }: Props) {
-  // A tap shows the controls for a few seconds; while paused they stay up.
+  // A tap shows the controls for a few seconds; while stopped they stay up.
   const [woken, setWoken] = useState(false);
   const [shownFor, setShownFor] = useState(video?.id);
 
@@ -81,14 +80,16 @@ export function Player({
   const sparkles = useSparkles();
 
   const pullRef = useRef<HTMLDivElement | null>(null);
-  const pull = (dy: number) => {
+  const pull = (dx: number, dy: number) => {
     const el = pullRef.current;
     if (!el) return;
-    const distance = fullscreen.active ? Math.min(Math.max(0, dy), PULL_MAX_PX) : 0;
+    const travel = Math.hypot(dx, dy);
+    const distance = fullscreen.active ? Math.min(travel, PULL_MAX_PX) : 0;
+    const scale = travel > 0 ? distance / travel : 0;
     // Springs back on release; the fullscreen exit (if it was far enough) takes over from there.
     el.style.transition = distance === 0 ? "transform 200ms ease-out" : "none";
     el.style.transform =
-      distance === 0 ? "" : `translateY(${distance * PULL_FOLLOW}px) scale(${1 - distance * PULL_SHRINK_PER_PX})`;
+      distance === 0 ? "" : `translate(${dx * scale * PULL_FOLLOW}px, ${dy * scale * PULL_FOLLOW}px) scale(${1 - distance * PULL_SHRINK_PER_PX})`;
   };
 
   const wake = () => setWoken(true);
@@ -102,7 +103,8 @@ export function Player({
   const gestures = useGestures({
     onTap: (point) => {
       wake();
-      onTogglePlay();
+      // Never pauses: only gets a stopped video going again.
+      if (status !== "playing") onPlay();
       if (fullscreen.active) sparkles.spawn(point.x, point.y);
       // A tiny buzz with it. Android only: iOS has no vibration API for web pages.
       try {
@@ -111,13 +113,11 @@ export function Player({
         // not allowed here
       }
     },
-    onSwipeUp: () => {
-      if (!fullscreen.active) fullscreen.enter();
-    },
-    onSwipeDown: () => {
+    onSwipe: (up) => {
       if (fullscreen.active) fullscreen.exit();
+      else if (up) fullscreen.enter();
     },
-    onDrag: (_dx, dy) => pull(dy),
+    onDrag: pull,
   }, fullscreen.rotated);
 
   useEffect(() => {
@@ -187,18 +187,15 @@ export function Player({
                 role="status"
                 className="size-14 animate-spin rounded-full border-4 border-white/25 border-t-white sm:size-16"
               />
-            ) : (
+            ) : status === "playing" ? null : (
+              // No pause button: stray taps kept stopping the video.
               <button
                 type="button"
-                onClick={withWake(onTogglePlay)}
-                aria-label={status === "playing" ? "Pauza" : "Ijro etish"}
+                onClick={withWake(onPlay)}
+                aria-label="Ijro etish"
                 className={`${interactive} flex size-22 items-center justify-center rounded-full bg-black/40 text-white transition-transform duration-100 active:scale-90 sm:size-26`}
               >
-                {status === "playing" ? (
-                  <PauseIcon className="size-12 sm:size-14" />
-                ) : (
-                  <PlayIcon className="size-12 sm:size-14" />
-                )}
+                <PlayIcon className="size-12 sm:size-14" />
               </button>
             )}
           </div>

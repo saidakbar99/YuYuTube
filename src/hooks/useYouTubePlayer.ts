@@ -86,12 +86,12 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId, clipFor }: Hand
     playerRef.current?.pauseVideo();
   }, []);
 
-  const togglePlay = useCallback(() => {
-    if (status === "playing") pause();
-    else if (status === "paused" || status === "loading" || status === "stalled") resume();
+  // Taps never pause: a stray tap kept stopping the video. They only get a stopped one going again.
+  const playOrResume = useCallback(() => {
+    if (status === "paused" || status === "loading" || status === "stalled") resume();
     // A finished video has nothing to resume — a tap should start it over.
     else if (status === "ended" && currentIdRef.current) play(currentIdRef.current);
-  }, [status, pause, resume, play]);
+  }, [status, resume, play]);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,5 +240,5 @@ export function useYouTubePlayer({ onEnded, onFailed, preloadId, clipFor }: Hand
     return () => window.clearInterval(timer);
   }, [status, fireEnd]);
 
-  return { containerRef, status, progress, play, pause, resume, togglePlay };
+  return { containerRef, status, progress, play, pause, resume, playOrResume };
 }

@@ -8,14 +8,6 @@ export function PlayIcon({ className = "" }: IconProps) {
   );
 }
 
-export function PauseIcon({ className = "" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="currentColor">
-      <rect x="5.5" y="4" width="4.5" height="16" rx="0.5" />
-      <rect x="14" y="4" width="4.5" height="16" rx="0.5" />
-    </svg>
-  );
-}
 
 export function NextIcon({ className = "" }: IconProps) {
   return (

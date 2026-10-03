@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { useSyncExternalStore } from "react";
 import { VideoCard } from "@/components/VideoCard";
 import { getHomeOrder, getServerHomeOrder, subscribeHomeOrder } from "@/lib/homeOrder";
 
@@ -21,15 +20,14 @@ function Logo() {
 export function HomeScreen({ onSelect, calmOnly }: { onSelect: (id: string) => void; calmOnly: boolean }) {
   const order = useSyncExternalStore(subscribeHomeOrder, getHomeOrder, getServerHomeOrder);
   const shown = calmOnly ? order.filter((v) => v.calm) : order;
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain bg-yt-bg">
+    <div className="h-full overflow-y-auto overscroll-contain bg-yt-bg">
       <header className="sticky top-0 z-30 flex min-h-14 transform-gpu items-center bg-yt-bg px-4 pt-[env(safe-area-inset-top)]">
         <Logo />
       </header>
 
-      <div className="mx-auto max-w-7xl px-3 pt-2 pb-32 sm:px-5">
+      <div className="mx-auto max-w-7xl px-3 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-5">
         {/* The prerendered HTML holds the unshuffled order; fade in once the
             client store takes over so the reorder is not a visible jump. */}
         <div
@@ -42,8 +40,6 @@ export function HomeScreen({ onSelect, calmOnly }: { onSelect: (id: string) => v
           ))}
         </div>
       </div>
-
-      <BottomNav active onHome={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })} />
     </div>
   );
 }

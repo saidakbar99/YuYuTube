@@ -120,7 +120,7 @@ export function App() {
     [goTo, nextAllowed],
   );
 
-  const { containerRef, status, progress, play, pause, togglePlay } = useYouTubePlayer({
+  const { containerRef, status, progress, play, pause, playOrResume } = useYouTubePlayer({
     onEnded: handleEnded,
     onFailed: handleFailed,
     preloadId: videos[0]?.id,
@@ -288,7 +288,7 @@ export function App() {
         backGuard={back}
         onBoardDone={boardNext !== null && view === "watch" ? finishBoard : null}
         onSelect={choose}
-        onTogglePlay={togglePlay}
+        onPlay={playOrResume}
         onNext={playNext}
         onReplay={replay}
         onHome={goHome}

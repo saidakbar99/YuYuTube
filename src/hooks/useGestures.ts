@@ -14,8 +14,8 @@ export type LocalPoint = { x: number; y: number };
 
 type GestureHandlers = {
   onTap: (point: LocalPoint) => void;
-  onSwipeUp: () => void;
-  onSwipeDown: () => void;
+  /** A swipe in any direction; `up` says whether it went mostly upward. */
+  onSwipe: (up: boolean) => void;
   /** The finger's travel so far in the video's frame, called as it moves (and with 0,0 on release). */
   onDrag?: (dx: number, dy: number) => void;
 };
@@ -68,8 +68,9 @@ export function useGestures(handlers: GestureHandlers, rotated = false) {
         const [dx, dy] = travel(event, start);
         const absX = Math.abs(dx);
         const absY = Math.abs(dy);
-        const speed = absY / Math.max(1, event.timeStamp - start.at);
-        const swiped = absY > SWIPE_THRESHOLD || (absY > FLICK_MIN && speed > FLICK_SPEED);
+        const distance = Math.hypot(dx, dy);
+        const speed = distance / Math.max(1, event.timeStamp - start.at);
+        const swiped = distance > SWIPE_THRESHOLD || (distance > FLICK_MIN && speed > FLICK_SPEED);
 
         if (absX < TAP_SLOP && absY < TAP_SLOP) {
           const rect = event.currentTarget.getBoundingClientRect();
@@ -78,9 +79,8 @@ export function useGestures(handlers: GestureHandlers, rotated = false) {
               ? { x: event.clientY - rect.top, y: rect.right - event.clientX }
               : { x: event.clientX - rect.left, y: event.clientY - rect.top },
           );
-        } else if (swiped && absY > absX) {
-          if (dy > 0) latest.current.onSwipeDown();
-          else latest.current.onSwipeUp();
+        } else if (swiped) {
+          latest.current.onSwipe(dy < 0 && absY > absX);
         }
       },
     };

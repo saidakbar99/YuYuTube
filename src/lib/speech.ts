@@ -17,14 +17,14 @@ export function warmUpVoices() {
 }
 
 /** Says the tile's name: an Uzbek voice if the phone has one, else the Turkish voice with Turkish spelling. */
-function sayName(item: BoardItem) {
+function speakName(item: BoardItem) {
   const speech = synth();
   if (!speech) return;
   try {
     const voices = speech.getVoices();
     const uzbek = voices.find((v) => isLang(v, "uz"));
     const turkish = voices.find((v) => isLang(v, "tr"));
-    const utterance = new SpeechSynthesisUtterance(uzbek ? item.uz : item.tr);
+    const utterance = new SpeechSynthesisUtterance(item.uz);
     const voice = uzbek ?? turkish;
     // Even with the voice list not loaded yet, the language tag alone picks Turkish on most phones.
     utterance.lang = voice?.lang ?? "tr-TR";
@@ -73,7 +73,10 @@ function loadSound(name: string): Promise<AudioBuffer | null> {
 
 /** Fetches and decodes the board's recordings ahead of the first tap. */
 export function preloadSounds(items: readonly BoardItem[]) {
-  for (const item of items) if (item.sound) void loadSound(item.sound);
+  for (const item of items) {
+    if (item.sound) void loadSound(item.sound);
+    if (item.voice) void loadSound(`voice/${item.voice}`);
+  }
 }
 
 export type Phrase = "bismillah" | "alhamdulillah";
@@ -101,9 +104,34 @@ export async function playPhrase(name: Phrase): Promise<number> {
 
 let playing: AudioBufferSourceNode | null = null;
 let nameTimer: number | undefined;
+let taps = 0;
+
+function playBuffer(audio: AudioContext, buffer: AudioBuffer) {
+  const source = audio.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audio.destination);
+  source.start();
+  playing = source;
+}
+
+/** The family's own recording of the name when the tile has one, else the phone's voice. */
+function sayName(item: BoardItem) {
+  if (!item.voice) {
+    speakName(item);
+    return;
+  }
+  const tap = taps;
+  void loadSound(`voice/${item.voice}`).then((buffer) => {
+    if (taps !== tap) return; // a newer tap took over while this loaded
+    const audio = getAudio();
+    if (buffer && audio) playBuffer(audio, buffer);
+    else speakName(item);
+  });
+}
 
 /** Everything a tap should say: the real sound (or a chime), then the name. A new tap cuts the last one off. */
 export function playTile(item: BoardItem) {
+  taps += 1;
   primeSpeech();
   window.clearTimeout(nameTimer);
   try {
@@ -119,7 +147,8 @@ export function playTile(item: BoardItem) {
   }
 
   if (!item.sound) {
-    pop();
+    // An own recording already makes the noise itself, so only the phone's voice gets the pop.
+    if (!item.voice) pop();
     sayName(item);
     return;
   }
@@ -131,11 +160,7 @@ export function playTile(item: BoardItem) {
       sayName(item);
       return;
     }
-    const source = audio.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audio.destination);
-    source.start();
-    playing = source;
+    playBuffer(audio, buffer);
     nameTimer = window.setTimeout(() => sayName(item), buffer.duration * 1000 + NAME_GAP_MS);
   });
 }

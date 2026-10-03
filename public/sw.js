@@ -1,10 +1,29 @@
-const VERSION = "yuyutube-v6";
+const VERSION = "yuyutube-v8";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
-// The tap-and-hear recordings and spoken phrases (~270KB in all), so they work offline too.
-const SOUNDS = ["bee", "bird", "bus", "car", "cat", "chicken", "cow", "duck", "elephant", "frog", "horse", "lion", "plane", "sheep", "bismillah", "alhamdulillah"].map(
-  (name) => `/sounds/${name}.mp3`,
-);
+// The spoken phrases and the board's own voice recordings, so they work offline too.
+// Re-recorded a file? Bump VERSION so phones fetch it again (sounds are served cache-first).
+const SOUNDS = [
+  "bismillah",
+  "alhamdulillah",
+  "voice/ada",
+  "voice/ari",
+  "voice/baliq",
+  "voice/banan",
+  "voice/moshina",
+  "voice/mushuk",
+  "voice/olma",
+  "voice/ordak",
+  "voice/ot",
+  "voice/oy",
+  "voice/qoy",
+  "voice/qurbaqa",
+  "voice/qush",
+  "voice/quyosh",
+  "voice/sher",
+  "voice/sigir",
+  "voice/tuya",
+].map((name) => `/sounds/${name}.mp3`);
 
 const OFFLINE_HTML = `<!doctype html><html lang="uz"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { Player } from "@/components/Player";
 import { TapBoard } from "@/components/TapBoard";
 import { VideoCard } from "@/components/VideoCard";
@@ -22,7 +21,7 @@ type Props = {
   backGuard: Pick<ReturnType<typeof useBackGuard>, "open" | "close">;
   suspended: boolean;
   onSelect: (id: string) => void;
-  onTogglePlay: () => void;
+  onPlay: () => void;
   onNext: () => void;
   onReplay: () => void;
   onHome: () => void;
@@ -40,7 +39,7 @@ export function WatchScreen({
   backGuard,
   suspended,
   onSelect,
-  onTogglePlay,
+  onPlay,
   onNext,
   onReplay,
   onHome,
@@ -108,7 +107,7 @@ export function WatchScreen({
           stageRef={stageRef}
           fullscreen={fullscreen}
           hasNext={feed.length > 0}
-          onTogglePlay={onTogglePlay}
+          onPlay={onPlay}
           onNext={onNext}
           onReplay={onReplay}
           onHome={leave}
@@ -120,7 +119,7 @@ export function WatchScreen({
       {!fullscreen.active && (
         <div
           ref={feedRef}
-          className="flex-1 pb-32 md:landscape:w-[35%] md:landscape:overflow-y-auto md:landscape:overscroll-contain"
+          className="flex-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:landscape:w-[35%] md:landscape:overflow-y-auto md:landscape:overscroll-contain"
         >
           <div className="grid grid-cols-1 gap-4 px-3 pt-3 md:grid-cols-2 md:landscape:grid-cols-1">
             {feed.map((item) => (
@@ -129,8 +128,6 @@ export function WatchScreen({
           </div>
         </div>
       )}
-
-      {!fullscreen.active && <BottomNav active={false} onHome={leave} />}
 
       {!fullscreen.active && onBoardDone && <TapBoard onDone={onBoardDone} />}
     </div>
