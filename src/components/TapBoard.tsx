@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { config } from "@/config";
 import { boardItems } from "@/data/board";
 import { shuffle } from "@/lib/shuffle";
-import { playTile, preloadSounds, warmUpVoices } from "@/lib/speech";
+import { audioRunning, playTile, preloadSounds, primeSpeech, warmUpVoices } from "@/lib/speech";
 
 const TILES = 6;
 
@@ -57,12 +57,23 @@ export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inP
     };
   }, [items]);
 
-  // The bounce answers the finger straight away...
-  const bounce = (index: number) => {
+  // Set when the sound already started on touch-down, so the click that follows doesn't play it again.
+  const spoke = useRef(false);
+
+  // Bounce and sound answer the finger straight away. Only while audio is still locked (the very
+  // first tap) does the sound wait for the release: on touch screens only that may unlock it.
+  const press = (index: number) => {
     setTaps((list) => list.map((n, i) => (i === index ? n + 1 : n)));
+    spoke.current = audioRunning();
+    if (spoke.current) speak(index);
   };
 
-  // ...but sound waits for the release: on touch screens only that counts as a tap that may play audio.
+  const release = (index: number) => {
+    primeSpeech();
+    if (spoke.current) spoke.current = false;
+    else speak(index);
+  };
+
   const speak = (index: number) => {
     playTile(items[index]);
     try {
@@ -93,8 +104,8 @@ export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inP
             key={item.emoji}
             type="button"
             aria-label={item.uz}
-            onPointerDown={() => bounce(i)}
-            onClick={() => speak(i)}
+            onPointerDown={() => press(i)}
+            onClick={() => release(i)}
             className="flex items-center justify-center rounded-3xl transition-transform duration-100 active:scale-95"
             style={{ backgroundColor: item.bg }}
           >

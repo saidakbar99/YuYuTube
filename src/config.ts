@@ -11,9 +11,7 @@ export const config = {
   /** After this many videos in a row, a tap-and-hear break comes before the next one. `null` is off. */
   boardEvery: 3 as number | null,
   /** How long the tap-and-hear break lasts before the next video plays on its own. */
-  boardSeconds: 30,
-  /** How many of his most-picked videos lead the home screen. */
-  favoritesOnTop: 4,
+  boardSeconds: 60,
   /** 0–100, applied to the YouTube player. iOS ignores it; use the device's own limits there. */
   maxVolume: 60,
 };

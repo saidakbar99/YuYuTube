@@ -17,12 +17,10 @@ import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
 import { clipOf } from "@/lib/clip";
-import { recordPick, recordWatch } from "@/lib/favorites";
 import { playPhrase, preloadPhrases } from "@/lib/speech";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
 
-const WATCH_TICK_S = 5;
 // Pause between a spoken phrase and the video starting.
 const PHRASE_GAP_MS = 250;
 const PHRASE_WAIT_MS = 2500;
@@ -137,13 +135,6 @@ export function App() {
 
   const screenTime = useScreenTime(view === "watch" && status === "playing");
 
-  // Watching time feeds the favorites too, not just taps.
-  const watchingId = view === "watch" && status === "playing" ? currentId : null;
-  useEffect(() => {
-    if (!watchingId) return;
-    const timer = window.setInterval(() => recordWatch(watchingId, WATCH_TICK_S), WATCH_TICK_S * 1000);
-    return () => window.clearInterval(timer);
-  }, [watchingId]);
   const bedtime = useBedtime();
   const online = useOnline();
 
@@ -211,7 +202,6 @@ export function App() {
   const open = useCallback(
     (id: string) => {
       enterFullscreenRef.current();
-      recordPick(id);
       failuresRef.current = 0;
       setExhausted(false);
       // The first video of each launch starts with "Bismillah".
@@ -237,7 +227,6 @@ export function App() {
         return;
       }
       enterFullscreenRef.current();
-      recordPick(id);
       goTo(id);
     },
     [goTo, pause],

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const MAX_SPARKLES = 8;
+const MAX_SPARKLES = 10;
 const SPARKLE_EMOJI = ["⭐", "🌟", "💖", "🎈", "🫧", "🦋"];
 
 type Sparkle = { id: number; x: number; y: number; emoji: string };
@@ -36,7 +36,7 @@ export function SparkleLayer({
       {sparkles.map((s) => (
         <span
           key={s.id}
-          className="sparkle absolute text-5xl"
+          className="sparkle absolute text-[7.5rem] leading-none"
           style={{ left: s.x, top: s.y }}
           onAnimationEnd={() => remove(s.id)}
         >

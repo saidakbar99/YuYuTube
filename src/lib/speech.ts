@@ -4,6 +4,8 @@ import { getAudio } from "@/lib/audio";
 const isLang = (voice: SpeechSynthesisVoice, code: string) => voice.lang.toLowerCase().startsWith(code);
 // Pause between the recording ending and the name being said.
 const NAME_GAP_MS = 150;
+// A tile counts as still talking for at most this long, in case an end event never comes.
+const MAX_TILE_MS = 10_000;
 
 const synth = () => (typeof window !== "undefined" ? window.speechSynthesis : undefined);
 
@@ -17,9 +19,12 @@ export function warmUpVoices() {
 }
 
 /** Says the tile's name: an Uzbek voice if the phone has one, else the Turkish voice with Turkish spelling. */
-function speakName(item: BoardItem) {
+function speakName(item: BoardItem, onEnd: () => void) {
   const speech = synth();
-  if (!speech) return;
+  if (!speech) {
+    onEnd();
+    return;
+  }
   try {
     const voices = speech.getVoices();
     const uzbek = voices.find((v) => isLang(v, "uz"));
@@ -31,16 +36,19 @@ function speakName(item: BoardItem) {
     if (voice) utterance.voice = voice;
     utterance.rate = 0.85;
     utterance.pitch = 1.15;
+    utterance.onend = onEnd;
+    utterance.onerror = onEnd;
     speech.speak(utterance);
   } catch {
     // speech unavailable — the recording or chime already played
+    onEnd();
   }
 }
 
 // iOS only lets speech start from inside a tap the first time; an empty utterance there unlocks it
-// for the name said a moment later, after the recording.
+// for the name said a moment later, after the recording. Call it from a click, not a touch-down.
 let speechPrimed = false;
-function primeSpeech() {
+export function primeSpeech() {
   if (speechPrimed) return;
   speechPrimed = true;
   try {
@@ -105,34 +113,57 @@ export async function playPhrase(name: Phrase): Promise<number> {
 let playing: AudioBufferSourceNode | null = null;
 let nameTimer: number | undefined;
 let taps = 0;
+// The tile whose sound or name is still going.
+let talking: BoardItem | null = null;
+let talkingTimer: number | undefined;
 
-function playBuffer(audio: AudioContext, buffer: AudioBuffer) {
+/** Marks tap number `tap` as over, unless a newer tap has taken over since. */
+function finished(tap: number) {
+  if (taps !== tap) return;
+  talking = null;
+  window.clearTimeout(talkingTimer);
+}
+
+function playBuffer(audio: AudioContext, buffer: AudioBuffer, onEnd?: () => void) {
   const source = audio.createBufferSource();
   source.buffer = buffer;
   source.connect(audio.destination);
+  if (onEnd) source.onended = onEnd;
   source.start();
   playing = source;
 }
 
 /** The family's own recording of the name when the tile has one, else the phone's voice. */
-function sayName(item: BoardItem) {
+function sayName(item: BoardItem, tap: number) {
+  const done = () => finished(tap);
   if (!item.voice) {
-    speakName(item);
+    speakName(item, done);
     return;
   }
-  const tap = taps;
   void loadSound(`voice/${item.voice}`).then((buffer) => {
     if (taps !== tap) return; // a newer tap took over while this loaded
     const audio = getAudio();
-    if (buffer && audio) playBuffer(audio, buffer);
-    else speakName(item);
+    if (buffer && audio) playBuffer(audio, buffer, done);
+    else speakName(item, done);
   });
 }
 
-/** Everything a tap should say: the real sound (or a chime), then the name. A new tap cuts the last one off. */
+/** Unlocked audio may start on a touch-down; until then only a click can start it. */
+export function audioRunning(): boolean {
+  return getAudio()?.state === "running";
+}
+
+/**
+ * Everything a tap should say: the real sound (or a chime), then the name. Tapping the same tile
+ * again while it is still talking lets it finish; another tile cuts it off.
+ */
 export function playTile(item: BoardItem) {
+  if (talking === item) return;
   taps += 1;
-  primeSpeech();
+  const tap = taps;
+  talking = item;
+  window.clearTimeout(talkingTimer);
+  talkingTimer = window.setTimeout(() => finished(tap), MAX_TILE_MS);
   window.clearTimeout(nameTimer);
   try {
     playing?.stop();
@@ -149,19 +180,20 @@ export function playTile(item: BoardItem) {
   if (!item.sound) {
     // An own recording already makes the noise itself, so only the phone's voice gets the pop.
     if (!item.voice) pop();
-    sayName(item);
+    sayName(item, tap);
     return;
   }
 
   void loadSound(item.sound).then((buffer) => {
+    if (taps !== tap) return; // a newer tap took over while this loaded
     const audio = getAudio();
     if (!buffer || !audio) {
       pop();
-      sayName(item);
+      sayName(item, tap);
       return;
     }
     playBuffer(audio, buffer);
-    nameTimer = window.setTimeout(() => sayName(item), buffer.duration * 1000 + NAME_GAP_MS);
+    nameTimer = window.setTimeout(() => sayName(item, tap), buffer.duration * 1000 + NAME_GAP_MS);
   });
 }
 

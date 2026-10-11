@@ -38,8 +38,7 @@ Exits non-zero and names the offending IDs if any are removed, private, or embed
 | `bedtime` | `20:00`–`07:00` | `null` is off. During it only videos marked `calm: true` in `videos.ts` are shown; if none are marked, a 🌙 screen follows the current video. The corner hold unlocks the full library for the rest of that night |
 | `eveningFrom` | `18:00` | `null` is off. From then the whole screen, videos included, takes a warm tint (less blue light), fading in over a minute; stronger during `bedtime` |
 | `boardEvery` | `3` | `null` is off. After this many videos, a tap-and-hear break comes before the next one: big pictures that bounce, play a real recording (animals and vehicles, `public/sounds/`, credits in `public/sounds/CREDITS.md`) or a chime, then say their name in Uzbek with the phone's voice if it has one. In fullscreen the break shows inside the player, so fullscreen stays on. Tiles live in `src/data/board.ts` |
-| `boardSeconds` | `30` | how long the break lasts; then the next video plays by itself. The break does not count as screen time |
-| `favoritesOnTop` | `4` | how many favorites lead the home screen. A video earns points when he picks it himself (1 point) and for time actually watched (0.3 per minute, up to 10 minutes per sitting, autoplayed videos included). Points halve every week, so it follows what he likes now; about 3 points makes a favorite |
+| `boardSeconds` | `60` | how long the break lasts; then the next video plays by itself. The break does not count as screen time |
 
 Mark a bedtime video with `calm: true`:
 
