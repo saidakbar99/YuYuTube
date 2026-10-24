@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const CONFIRM_MS = 3000;
 
-export type BackLayer = "watch" | "fullscreen" | "board";
+export type BackLayer = "watch" | "fullscreen" | "board" | "panel";
 
 type Entry = { layer: BackLayer; depth: number; onBack: () => void };
 
@@ -12,7 +12,7 @@ type Entry = { layer: BackLayer; depth: number; onBack: () => void };
  * Back button handling. The history stack is kept as [page, guard, ...layers], layers being
  * `watch` and then `fullscreen` on top of it:
  * - back pops the top layer and calls its `onBack` (fullscreen → watch → home, like YouTube;
- *   the board opened from home → home);
+ *   the board or parent panel opened from home → home);
  * - back on home pops `guard` and only shows a notice (`confirming`);
  * - back again while the notice is up goes past the app and leaves it.
  *

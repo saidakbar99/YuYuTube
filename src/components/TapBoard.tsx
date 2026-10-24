@@ -5,6 +5,7 @@ import { HomeIcon } from "@/components/PlayerIcons";
 import { config } from "@/config";
 import { boardItems } from "@/data/board";
 import { shuffle } from "@/lib/shuffle";
+import { tapTile } from "@/lib/stats";
 import { audioRunning, playTile, preloadSounds, primeSpeech, warmUpVoices } from "@/lib/speech";
 
 const TILES = 6;
@@ -86,6 +87,7 @@ export function TapBoard({
 
   const speak = (index: number) => {
     playTile(items[index]);
+    tapTile(items[index].uz);
     try {
       navigator.vibrate?.(15);
     } catch {
@@ -96,7 +98,7 @@ export function TapBoard({
   return (
     // Inside a fullscreen player it fills the (always landscape) video area; otherwise the whole screen.
     <div
-      className={`flex flex-col bg-yt-bg px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+      className={`flex flex-col bg-app-bg px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
         inPlayer ? "absolute inset-0 z-40" : "fixed inset-0 z-50"
       }`}
     >
@@ -106,13 +108,13 @@ export function TapBoard({
             type="button"
             onClick={onExit}
             aria-label="Bosh sahifa"
-            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-transform duration-100 active:scale-90"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-app-surface text-app-text shadow-sm transition-transform duration-100 active:scale-90"
           >
             <HomeIcon filled className="size-7" />
           </button>
         )}
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-          <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s`, animationPlayState: hidden ? "paused" : "running" }} />
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-app-text/10">
+          <div className="board-timer h-full rounded-full bg-app-text/35" style={{ animationDuration: `${config.boardSeconds}s`, animationPlayState: hidden ? "paused" : "running" }} />
         </div>
       </div>
 

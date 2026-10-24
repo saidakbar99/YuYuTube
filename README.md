@@ -40,6 +40,16 @@ Exits non-zero and names the offending IDs if any are removed, private, or embed
 | `boardEvery` | `3` | `null` is off. After this many videos, a tap-and-hear break comes before the next one: big pictures that bounce, play a real recording (animals and vehicles, `public/sounds/`, credits in `public/sounds/CREDITS.md`) or a chime, then say their name in Uzbek with the phone's voice if it has one. In fullscreen the break shows inside the player, so fullscreen stays on. Tiles live in `src/data/board.ts` |
 | `boardSeconds` | `60` | how long the break lasts; then the next video plays by itself. The break does not count as screen time |
 
+The board also opens any time from the 🐱 button on the home screen (with a home button to leave it).
+
+## Parent panel
+
+Hold the sun logo on the home screen for 2s. It shows, for today / 7 / 30 days: watch time, a
+daily chart, the most-watched videos, ones he keeps dropping within 20s, ones that failed to play,
+and his favourite board pictures. Any video can be hidden there (gone from home, the list and
+autoplay); today's screen time can be reset. Everything is in `localStorage`, so **each phone has
+its own stats and its own hidden list** (`src/lib/stats.ts`, `src/lib/hidden.ts`).
+
 Mark a bedtime video with `calm: true`:
 
 ```ts
@@ -80,4 +90,6 @@ Import the repo on Vercel. Framework autodetects as Next.js; no settings, no env
   - `src/app/favicon.ico` (16/32/48) and `src/app/icon.svg` — browser tab, transparent background
   - `src/app/apple-icon.png` (180) — iOS/iPadOS home screen, opaque because iOS fills transparency with black
   - `public/icons/icon-{192,512}.png` — installed-app icon and Android splash, transparent
-  - `public/icons/icon-maskable-{192,512}.png` — Android launcher, full bleed with the badge inside the safe zone
+  - `public/icons/icon-maskable-{192,512}.png` — Android launcher, full bleed with the face inside the safe zone
+- The icon is a smiling sun on purpose: the old red play button looked like YouTube's and made him ask for the real thing. Android bakes the icon and splash in at install, so reinstall to see a new one straight away.
+- Two skies (`globals.css`): light by day, deep blue from `bedtime.start` (set on `<html data-sky>` by `App`). The night one is the default so an app opened in a dark room never flashes bright.

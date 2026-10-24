@@ -228,7 +228,7 @@ export function Player({
             </div>
             <div className="mt-1 h-0.75 w-full rounded-full bg-white/30">
               <div
-                className="h-full rounded-full bg-yt-red transition-[width] duration-200 ease-linear"
+                className="h-full rounded-full bg-app-accent transition-[width] duration-200 ease-linear"
                 style={{ width: `${ratio * 100}%` }}
               />
             </div>

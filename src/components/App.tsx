@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BackExitNotice } from "@/components/BackExitNotice";
 import { HomeScreen } from "@/components/HomeScreen";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { NightTint } from "@/components/NightTint";
+import { ParentPanel } from "@/components/ParentPanel";
 import { HomeIcon } from "@/components/PlayerIcons";
 import { RestScreen } from "@/components/RestScreen";
 import { TapBoard } from "@/components/TapBoard";
@@ -17,7 +18,10 @@ import { useBedtime } from "@/hooks/useBedtime";
 import { useOnline } from "@/hooks/useOnline";
 import { useScreenTime } from "@/hooks/useScreenTime";
 import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
+import { getWarmth, subscribeBedtime } from "@/lib/bedtime";
 import { clipOf } from "@/lib/clip";
+import { getHidden, getServerHidden, subscribeHidden } from "@/lib/hidden";
+import { addWatch, failVideo, finishVideo, startVideo, stopVideo } from "@/lib/stats";
 import { playPhrase, preloadPhrases } from "@/lib/speech";
 import { buildFeed, pushRecent } from "@/lib/feed";
 import { reshuffleHome } from "@/lib/homeOrder";
@@ -37,6 +41,7 @@ export function App() {
   const [boardNext, setBoardNext] = useState<string | null>(null);
   // The board opened from the home screen's button rather than as a break.
   const [homeBoard, setHomeBoard] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const feedRef = useRef<Video[]>([]);
   const playRef = useRef<(id: string) => void>(() => {});
@@ -54,6 +59,7 @@ export function App() {
   /** `after`: something to finish first (a spoken phrase, resolving to its length in seconds). */
   const goTo = useCallback((id: string, after?: Promise<number>) => {
     const next = buildFeed(libraryRef.current, id, pushRecent(id));
+    startVideo(id);
     sinceBoardRef.current += 1;
     feedRef.current = next;
     currentIdRef.current = id;
@@ -80,6 +86,7 @@ export function App() {
   }, []);
 
   const handleEnded = useCallback(() => {
+    if (currentIdRef.current) finishVideo(currentIdRef.current);
     // Time is up: stay on the finished video so the rest screen takes over.
     if (!config.autoplayNext || blockedRef.current) return;
     const current = currentIdRef.current;
@@ -109,6 +116,7 @@ export function App() {
 
   const handleFailed = useCallback(
     (failedId: string | null) => {
+      if (failedId) failVideo(failedId);
       if (blockedRef.current) return;
       failuresRef.current += 1;
       const next = nextAllowed(failedId);
@@ -136,12 +144,37 @@ export function App() {
     if (status === "playing") failuresRef.current = 0;
   }, [status]);
 
-  const screenTime = useScreenTime(view === "watch" && status === "playing");
+  const watching = view === "watch" && status === "playing";
+  const screenTime = useScreenTime(watching);
+
+  // For the parent panel: how long each video actually played.
+  useEffect(() => {
+    if (!watching) return;
+    const timer = window.setInterval(() => {
+      if (currentIdRef.current) addWatch(currentIdRef.current, 1000);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [watching]);
+
+  // Day sky, or night sky from bedtime on (globals.css). Read straight from the clock, not via
+  // hydration's daytime first render, so a dark room never gets a flash of the bright one.
+  useEffect(() => {
+    const apply = () => {
+      document.documentElement.dataset.sky = getWarmth() === "night" ? "night" : "day";
+    };
+    apply();
+    return subscribeBedtime(apply);
+  }, []);
 
   const bedtime = useBedtime();
   const online = useOnline();
 
-  const library = useMemo(() => (bedtime.active ? videos.filter((v) => v.calm) : videos), [bedtime.active]);
+  // Videos a parent hid in the panel are gone everywhere: home, the list and autoplay.
+  const hidden = useSyncExternalStore(subscribeHidden, getHidden, getServerHidden);
+  const library = useMemo(
+    () => videos.filter((v) => !hidden.includes(v.id) && (!bedtime.active || v.calm)),
+    [hidden, bedtime.active],
+  );
   const bedtimeEmpty = bedtime.active && library.length === 0;
 
   // Time is up (or it's bedtime with nothing calm to show). The video playing may finish
@@ -186,6 +219,7 @@ export function App() {
 
   const showHome = useCallback(() => {
     pause();
+    stopVideo();
     setBoardNext(null);
     // A fresh start from the home screen: the next break comes after a full run of videos.
     sinceBoardRef.current = 0;
@@ -226,6 +260,16 @@ export function App() {
   const closeBoard = useCallback(() => {
     closeLayer("board");
     setHomeBoard(false);
+  }, [closeLayer]);
+
+  const openPanel = useCallback(() => {
+    setPanelOpen(true);
+    openLayer("panel", () => setPanelOpen(false));
+  }, [openLayer]);
+
+  const closePanel = useCallback(() => {
+    closeLayer("panel");
+    setPanelOpen(false);
   }, [closeLayer]);
 
   const goHome = useCallback(() => {
@@ -300,13 +344,13 @@ export function App() {
       />
 
       {exhausted && view === "watch" && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-yt-bg px-8">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-app-bg px-8">
           <div className="text-7xl">🙈</div>
           <button
             type="button"
             onClick={goHome}
             aria-label="Boshqasini tanlash"
-            className="flex size-24 items-center justify-center rounded-full bg-white text-black transition-transform duration-100 active:scale-90"
+            className="flex size-24 items-center justify-center rounded-full bg-app-surface text-app-text shadow-lg transition-transform duration-100 active:scale-90"
           >
             <HomeIcon filled className="size-12" />
           </button>
@@ -315,11 +359,12 @@ export function App() {
 
       {view === "home" && (
         <div className="fixed inset-0 z-50">
-          <HomeScreen onSelect={open} onBoard={openBoard} calmOnly={bedtime.active} />
+          <HomeScreen onSelect={open} onBoard={openBoard} onPanel={openPanel} calmOnly={bedtime.active} />
         </div>
       )}
 
       {homeBoard && view === "home" && <TapBoard onDone={closeBoard} onExit={closeBoard} />}
+      {panelOpen && view === "home" && <ParentPanel onClose={closePanel} />}
 
       {resting && <RestScreen emoji={bedtimeEmpty ? "🌙" : "👋"} onUnlock={unlock} />}
       {!online && <OfflineNotice />}
