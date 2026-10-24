@@ -58,9 +58,48 @@ export function primeSpeech() {
   }
 }
 
+// The board's recordings are quiet phone recordings, each at its own level. They are scaled to
+// full scale on load, then pushed louder still through a limiter that keeps the peaks from clipping.
+const BOARD_PEAK = 0.98;
+const BOARD_BOOST = 2.5;
+
+/** Scales the samples so the loudest one sits at `BOARD_PEAK`. */
+function normalize(buffer: AudioBuffer): AudioBuffer {
+  let peak = 0;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    for (const sample of buffer.getChannelData(c)) peak = Math.max(peak, Math.abs(sample));
+  }
+  if (peak === 0) return buffer;
+  const gain = BOARD_PEAK / peak;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const data = buffer.getChannelData(c);
+    for (let i = 0; i < data.length; i++) data[i] *= gain;
+  }
+  return buffer;
+}
+
+let boardOut: AudioNode | null = null;
+
+/** Where the board's sounds go: boosted, then limited, then the speakers. */
+function boardOutput(audio: AudioContext): AudioNode {
+  if (boardOut?.context === audio) return boardOut;
+  const boost = audio.createGain();
+  boost.gain.value = BOARD_BOOST;
+  const limiter = audio.createDynamicsCompressor();
+  limiter.threshold.value = -6;
+  limiter.knee.value = 3;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.002;
+  limiter.release.value = 0.15;
+  boost.connect(limiter).connect(audio.destination);
+  boardOut = boost;
+  return boost;
+}
+
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
-function loadSound(name: string): Promise<AudioBuffer | null> {
+/** `board`: one of the board's recordings, brought up to full level once decoded. */
+function loadSound(name: string, board = false): Promise<AudioBuffer | null> {
   let pending = buffers.get(name);
   if (!pending) {
     pending = (async () => {
@@ -68,7 +107,8 @@ function loadSound(name: string): Promise<AudioBuffer | null> {
       if (!audio) return null;
       try {
         const response = await fetch(`/sounds/${name}.mp3`);
-        return await audio.decodeAudioData(await response.arrayBuffer());
+        const buffer = await audio.decodeAudioData(await response.arrayBuffer());
+        return board ? normalize(buffer) : buffer;
       } catch {
         buffers.delete(name); // try again next time, e.g. once back online
         return null;
@@ -82,8 +122,8 @@ function loadSound(name: string): Promise<AudioBuffer | null> {
 /** Fetches and decodes the board's recordings ahead of the first tap. */
 export function preloadSounds(items: readonly BoardItem[]) {
   for (const item of items) {
-    if (item.sound) void loadSound(item.sound);
-    if (item.voice) void loadSound(`voice/${item.voice}`);
+    if (item.sound) void loadSound(item.sound, true);
+    if (item.voice) void loadSound(`voice/${item.voice}`, true);
   }
 }
 
@@ -127,7 +167,7 @@ function finished(tap: number) {
 function playBuffer(audio: AudioContext, buffer: AudioBuffer, onEnd?: () => void) {
   const source = audio.createBufferSource();
   source.buffer = buffer;
-  source.connect(audio.destination);
+  source.connect(boardOutput(audio));
   if (onEnd) source.onended = onEnd;
   source.start();
   playing = source;
@@ -140,7 +180,7 @@ function sayName(item: BoardItem, tap: number) {
     speakName(item, done);
     return;
   }
-  void loadSound(`voice/${item.voice}`).then((buffer) => {
+  void loadSound(`voice/${item.voice}`, true).then((buffer) => {
     if (taps !== tap) return; // a newer tap took over while this loaded
     const audio = getAudio();
     if (buffer && audio) playBuffer(audio, buffer, done);
@@ -184,7 +224,7 @@ export function playTile(item: BoardItem) {
     return;
   }
 
-  void loadSound(item.sound).then((buffer) => {
+  void loadSound(item.sound, true).then((buffer) => {
     if (taps !== tap) return; // a newer tap took over while this loaded
     const audio = getAudio();
     if (!buffer || !audio) {
@@ -209,9 +249,9 @@ export function pop() {
     osc.frequency.setValueAtTime(420, now);
     osc.frequency.exponentialRampToValueAtTime(900, now + 0.12);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-    osc.connect(gain).connect(audio.destination);
+    osc.connect(gain).connect(boardOutput(audio));
     osc.start(now);
     osc.stop(now + 0.22);
   } catch {

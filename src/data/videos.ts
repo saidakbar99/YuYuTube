@@ -33,6 +33,7 @@ export const videos: Video[] = [
   { id: "dJkXo-yGVQI", title: "Omar & Hana songs", calm: true, start: "0:05", end: "14:00" },
   { id: "xxE7So44oOk", title: "Arabic Alphabet Nasheed", calm: true, start: "0:19", end: "5:13" },
   { id: "-cJu5dlnlYM", title: "Alif Arnab", calm: true },
+  { id: "cHqfk5lMw-E", title: "Bismillah Bismillah", calm: true, start: "0:33", end: "4:20" },
   // { id: "", title: "" },
   // { id: "", title: "" },
   // { id: "", title: "" },

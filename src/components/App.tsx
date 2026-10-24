@@ -7,6 +7,7 @@ import { OfflineNotice } from "@/components/OfflineNotice";
 import { NightTint } from "@/components/NightTint";
 import { HomeIcon } from "@/components/PlayerIcons";
 import { RestScreen } from "@/components/RestScreen";
+import { TapBoard } from "@/components/TapBoard";
 import { TouchSparkles } from "@/components/Sparkles";
 import { WatchScreen } from "@/components/WatchScreen";
 import { config } from "@/config";
@@ -34,6 +35,8 @@ export function App() {
   const [exhausted, setExhausted] = useState(false);
   // Set while the tap-and-hear break is up: the video to play once it's over.
   const [boardNext, setBoardNext] = useState<string | null>(null);
+  // The board opened from the home screen's button rather than as a break.
+  const [homeBoard, setHomeBoard] = useState(false);
 
   const feedRef = useRef<Video[]>([]);
   const playRef = useRef<(id: string) => void>(() => {});
@@ -214,6 +217,17 @@ export function App() {
     [goTo, enterWatch],
   );
 
+  // Back closes it like any layer; the button, or its time running out, closes it from here.
+  const openBoard = useCallback(() => {
+    setHomeBoard(true);
+    openLayer("board", () => setHomeBoard(false));
+  }, [openLayer]);
+
+  const closeBoard = useCallback(() => {
+    closeLayer("board");
+    setHomeBoard(false);
+  }, [closeLayer]);
+
   const goHome = useCallback(() => {
     leaveWatch();
     showHome();
@@ -301,9 +315,11 @@ export function App() {
 
       {view === "home" && (
         <div className="fixed inset-0 z-50">
-          <HomeScreen onSelect={open} calmOnly={bedtime.active} />
+          <HomeScreen onSelect={open} onBoard={openBoard} calmOnly={bedtime.active} />
         </div>
       )}
+
+      {homeBoard && view === "home" && <TapBoard onDone={closeBoard} onExit={closeBoard} />}
 
       {resting && <RestScreen emoji={bedtimeEmpty ? "🌙" : "👋"} onUnlock={unlock} />}
       {!online && <OfflineNotice />}

@@ -3,88 +3,53 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 // ---------------------------------------------------------------- design
 
-const RED_TOP = [255, 64, 64];
-const RED_BOTTOM = [214, 0, 0];
-const PLAY = [255, 255, 255];
-const TILE = [255, 255, 255]; // background of opaque home-screen icons
-
-const BADGE_ASPECT = 0.7; // badge height / width
-const BADGE_RADIUS = 0.3; // corner radius / badge height
-const PLAY_HEIGHT = 0.46; // triangle height / badge height
-const PLAY_ROUND = 0.1; // triangle corner radius / triangle height
+// A smiling sun. Nothing like a red play button: that one makes him ask for the real YouTube.
+const FACE_TOP = [255, 224, 102];
+const FACE_BOTTOM = [255, 170, 30];
+const FEATURE = [107, 62, 30]; // eyes and smile
+const CHEEK = [255, 120, 110];
+const CHEEK_ALPHA = 0.5;
+const TILE = [191, 230, 255]; // sky behind opaque home-screen icons
 
 /**
- * badge: badge width as a fraction of the canvas
+ * face: face diameter as a fraction of the canvas
  * tile: paint an opaque background (iOS fills transparency with black; maskable needs full bleed)
- * playScale: small favicons need a chunkier triangle to stay legible
+ * bold: small favicons need chunkier eyes and smile to stay legible
  */
-function geometry(size, { badge, tile = false, playScale = 1 }) {
+function geometry(size, { face, tile = false, bold = 1 }) {
   const cx = size / 2;
   const cy = size / 2;
-  const bw = size * badge;
-  const bh = bw * BADGE_ASPECT;
-
-  const th = bh * PLAY_HEIGHT * playScale;
-  const tw = th * 0.9;
-  const shift = tw * 0.08; // optical centring: a triangle's mass sits left of its box
-  const vertices = [
-    [cx - tw / 2 + shift, cy - th / 2],
-    [cx - tw / 2 + shift, cy + th / 2],
-    [cx + tw / 2 + shift, cy],
-  ];
-
-  const round = th * PLAY_ROUND;
+  const r = (size * face) / 2;
+  const at = (x, y) => [cx + x * r, cy + y * r];
   return {
     size,
     tile,
-    badge: { cx, cy, hw: bw / 2, hh: bh / 2, r: bh * BADGE_RADIUS },
-    play: { vertices: inset(vertices, round), round },
+    face: { cx, cy, r },
+    eyes: [-1, 1].map((side) => ({ c: at(side * 0.34, -0.2), rx: 0.1 * r * bold, ry: 0.15 * r * bold })),
+    cheeks: [-1, 1].map((side) => ({ c: at(side * 0.58, 0.18), r: 0.13 * r })),
+    // The lower part of a circle, from `from` to `to` radians (y points down, so π/2 is straight down).
+    smile: { c: at(0, -0.02), r: 0.5 * r, half: 0.075 * r * bold, from: Math.PI * 0.22, to: Math.PI * 0.78 },
   };
-}
-
-// Shrink toward the incentre so that re-growing by `round` restores the original size.
-function inset([a, b, c], round) {
-  const len = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
-  const la = len(b, c);
-  const lb = len(c, a);
-  const lc = len(a, b);
-  const perimeter = la + lb + lc;
-  const ix = (la * a[0] + lb * b[0] + lc * c[0]) / perimeter;
-  const iy = (la * a[1] + lb * b[1] + lc * c[1]) / perimeter;
-  const area = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
-  const k = (2 * area / perimeter - round) / (2 * area / perimeter);
-  return [a, b, c].map(([x, y]) => [ix + (x - ix) * k, iy + (y - iy) * k]);
 }
 
 // ---------------------------------------------------------------- raster
 
-function sdRoundBox(px, py, hw, hh, r) {
-  const qx = Math.abs(px) - hw + r;
-  const qy = Math.abs(py) - hh + r;
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+const sdCircle = (px, py, [cx, cy], r) => Math.hypot(px - cx, py - cy) - r;
+
+// Close enough to exact for features this round, which is all the antialiasing needs.
+function sdEllipse(px, py, { c: [cx, cy], rx, ry }) {
+  const k = Math.hypot((px - cx) / rx, (py - cy) / ry);
+  return (k - 1) * Math.min(rx, ry);
 }
 
-// Inigo Quilez's exact triangle distance.
-function sdTriangle(px, py, [[x0, y0], [x1, y1], [x2, y2]]) {
-  const edges = [
-    [x1 - x0, y1 - y0, px - x0, py - y0],
-    [x2 - x1, y2 - y1, px - x1, py - y1],
-    [x0 - x2, y0 - y2, px - x2, py - y2],
-  ];
-  const [e0x, e0y] = edges[0];
-  const [e2x, e2y] = edges[2];
-  const s = Math.sign(e0x * e2y - e0y * e2x);
-
-  let dist = Infinity;
-  let side = Infinity;
-  for (const [ex, ey, vx, vy] of edges) {
-    const t = Math.min(1, Math.max(0, (vx * ex + vy * ey) / (ex * ex + ey * ey)));
-    const qx = vx - ex * t;
-    const qy = vy - ey * t;
-    dist = Math.min(dist, qx * qx + qy * qy);
-    side = Math.min(side, s * (vx * ey - vy * ex));
-  }
-  return -Math.sqrt(dist) * Math.sign(side);
+// An arc with round caps.
+function sdArc(px, py, { c: [cx, cy], r, half, from, to }) {
+  const dx = px - cx;
+  const dy = py - cy;
+  const angle = Math.atan2(dy, dx);
+  if (angle >= from && angle <= to) return Math.abs(Math.hypot(dx, dy) - r) - half;
+  const cap = (a) => Math.hypot(dx - Math.cos(a) * r, dy - Math.sin(a) * r);
+  return Math.min(cap(from), cap(to)) - half;
 }
 
 const coverage = (d) => Math.min(1, Math.max(0, 0.5 - d));
@@ -97,9 +62,9 @@ function over([r, g, b, a], color, alpha) {
   return [blend(0), blend(1), blend(2), out];
 }
 
-function rasterize({ size, tile, badge, play }) {
+function rasterize({ size, tile, face, eyes, cheeks, smile }) {
   const rgba = Buffer.alloc(size * size * 4);
-  const top = badge.cy - badge.hh;
+  const top = face.cy - face.r;
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -107,9 +72,12 @@ function rasterize({ size, tile, badge, play }) {
       const py = y + 0.5;
 
       let pixel = tile ? [...TILE, 1] : [0, 0, 0, 0];
-      const shade = Math.min(1, Math.max(0, (py - top) / (badge.hh * 2)));
-      pixel = over(pixel, mix(RED_TOP, RED_BOTTOM, shade), coverage(sdRoundBox(px - badge.cx, py - badge.cy, badge.hw, badge.hh, badge.r)));
-      pixel = over(pixel, PLAY, coverage(sdTriangle(px, py, play.vertices) - play.round));
+      const shade = Math.min(1, Math.max(0, (py - top) / (face.r * 2)));
+      const inFace = coverage(sdCircle(px, py, [face.cx, face.cy], face.r));
+      pixel = over(pixel, mix(FACE_TOP, FACE_BOTTOM, shade), inFace);
+      for (const cheek of cheeks) pixel = over(pixel, CHEEK, CHEEK_ALPHA * coverage(sdCircle(px, py, cheek.c, cheek.r)));
+      for (const eye of eyes) pixel = over(pixel, FEATURE, coverage(sdEllipse(px, py, eye)));
+      pixel = over(pixel, FEATURE, coverage(sdArc(px, py, smile)));
 
       const at = (y * size + x) * 4;
       rgba[at] = Math.round(pixel[0]);
@@ -183,30 +151,32 @@ function ico(images) {
   return Buffer.concat([header, ...images.map((image) => image.data)]);
 }
 
-function svg({ size, badge, play }) {
+function svg({ size, face, eyes, cheeks, smile }) {
   const n = (v) => +v.toFixed(2);
-  const points = play.vertices.map(([x, y]) => `${n(x)},${n(y)}`).join(" ");
   const hex = (c) => `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  const point = (a) => `${n(smile.c[0] + Math.cos(a) * smile.r)} ${n(smile.c[1] + Math.sin(a) * smile.r)}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
   <defs>
-    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${hex(RED_TOP)}"/>
-      <stop offset="1" stop-color="${hex(RED_BOTTOM)}"/>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${hex(FACE_TOP)}"/>
+      <stop offset="1" stop-color="${hex(FACE_BOTTOM)}"/>
     </linearGradient>
   </defs>
-  <rect x="${n(badge.cx - badge.hw)}" y="${n(badge.cy - badge.hh)}" width="${n(badge.hw * 2)}" height="${n(badge.hh * 2)}" rx="${n(badge.r)}" fill="url(#red)"/>
-  <polygon points="${points}" fill="${hex(PLAY)}" stroke="${hex(PLAY)}" stroke-width="${n(play.round * 2)}" stroke-linejoin="round"/>
+  <circle cx="${n(face.cx)}" cy="${n(face.cy)}" r="${n(face.r)}" fill="url(#sun)"/>
+${cheeks.map((c) => `  <circle cx="${n(c.c[0])}" cy="${n(c.c[1])}" r="${n(c.r)}" fill="${hex(CHEEK)}" fill-opacity="${CHEEK_ALPHA}"/>`).join("\n")}
+${eyes.map((e) => `  <ellipse cx="${n(e.c[0])}" cy="${n(e.c[1])}" rx="${n(e.rx)}" ry="${n(e.ry)}" fill="${hex(FEATURE)}"/>`).join("\n")}
+  <path d="M${point(smile.from)} A${n(smile.r)} ${n(smile.r)} 0 0 1 ${point(smile.to)}" fill="none" stroke="${hex(FEATURE)}" stroke-width="${n(smile.half * 2)}" stroke-linecap="round"/>
 </svg>
 `;
 }
 
 // ---------------------------------------------------------------- output
 
-const favicon = { badge: 1, playScale: 1.12 };
-const standalone = { badge: 0.86 };
-const homeScreen = { badge: 0.72, tile: true };
-// Android may crop to an 80%-diameter circle; at 0.62 the badge's furthest corner sits at ~82% of that radius.
-const maskable = { badge: 0.62, tile: true };
+const favicon = { face: 1, bold: 1.25 };
+const standalone = { face: 0.86 };
+const homeScreen = { face: 0.72, tile: true };
+// Android may crop to an 80%-diameter circle; the face stays well inside it.
+const maskable = { face: 0.66, tile: true };
 
 const raster = (size, options) => png(size, rasterize(geometry(size, options)));
 

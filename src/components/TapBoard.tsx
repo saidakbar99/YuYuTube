@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { HomeIcon } from "@/components/PlayerIcons";
 import { config } from "@/config";
 import { boardItems } from "@/data/board";
 import { shuffle } from "@/lib/shuffle";
@@ -11,8 +12,17 @@ const TILES = 6;
 /**
  * A short break between videos: big pictures that bounce, make their real sound and say their name in Uzbek.
  * Nothing to finish or get wrong; after `config.boardSeconds` the next video comes on by itself.
+ * `onExit`: opened from the home screen, so it gets a button back there.
  */
-export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inPlayer?: boolean }) {
+export function TapBoard({
+  onDone,
+  onExit,
+  inPlayer = false,
+}: {
+  onDone: () => void;
+  onExit?: () => void;
+  inPlayer?: boolean;
+}) {
   const [items] = useState(() => shuffle(boardItems).slice(0, TILES));
   // Bumping a tile's count remounts its emoji, which restarts the bounce animation.
   const [taps, setTaps] = useState<number[]>(() => items.map(() => 0));
@@ -90,8 +100,20 @@ export function TapBoard({ onDone, inPlayer = false }: { onDone: () => void; inP
         inPlayer ? "absolute inset-0 z-40" : "fixed inset-0 z-50"
       }`}
     >
-      <div className="mx-1 mb-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s`, animationPlayState: hidden ? "paused" : "running" }} />
+      <div className="mx-1 mb-3 flex items-center gap-3">
+        {onExit && (
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Bosh sahifa"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-transform duration-100 active:scale-90"
+          >
+            <HomeIcon filled className="size-7" />
+          </button>
+        )}
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+          <div className="board-timer h-full rounded-full bg-white/40" style={{ animationDuration: `${config.boardSeconds}s`, animationPlayState: hidden ? "paused" : "running" }} />
+        </div>
       </div>
 
       <div

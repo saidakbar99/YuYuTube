@@ -1,8 +1,8 @@
-const VERSION = "yuyutube-v8";
+const VERSION = "yuyutube-v9";
 const SHELL = `${VERSION}-shell`;
 const THUMBS = `${VERSION}-thumbs`;
 // The spoken phrases and the board's own voice recordings, so they work offline too.
-// Re-recorded a file? Bump VERSION so phones fetch it again (sounds are served cache-first).
+// Re-recorded a file or redrew the icons? Bump VERSION so phones fetch them again (both are served cache-first).
 const SOUNDS = [
   "bismillah",
   "alhamdulillah",

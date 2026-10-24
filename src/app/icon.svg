@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ff4040"/>
-      <stop offset="1" stop-color="#d60000"/>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe066"/>
+      <stop offset="1" stop-color="#ffaa1e"/>
     </linearGradient>
   </defs>
-  <rect x="0" y="9.6" width="64" height="44.8" rx="13.44" fill="url(#red)"/>
-  <polygon points="25.58,24.38 25.58,39.62 39.3,32" fill="#ffffff" stroke="#ffffff" stroke-width="4.62" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="32" fill="url(#sun)"/>
+  <circle cx="13.44" cy="37.76" r="4.16" fill="#ff786e" fill-opacity="0.5"/>
+  <circle cx="50.56" cy="37.76" r="4.16" fill="#ff786e" fill-opacity="0.5"/>
+  <ellipse cx="21.12" cy="25.6" rx="4" ry="6" fill="#6b3e1e"/>
+  <ellipse cx="42.88" cy="25.6" rx="4" ry="6" fill="#6b3e1e"/>
+  <path d="M44.33 41.56 A16 16 0 0 1 19.67 41.56" fill="none" stroke="#6b3e1e" stroke-width="6" stroke-linecap="round"/>
 </svg>
